@@ -157,6 +157,7 @@ export type Database = {
           lead_id: string | null
           metadata: Json | null
           occurred_at: string
+          reason: string | null
           subject: string | null
           user_id: string
         }
@@ -167,6 +168,7 @@ export type Database = {
           lead_id?: string | null
           metadata?: Json | null
           occurred_at?: string
+          reason?: string | null
           subject?: string | null
           user_id: string
         }
@@ -177,6 +179,7 @@ export type Database = {
           lead_id?: string | null
           metadata?: Json | null
           occurred_at?: string
+          reason?: string | null
           subject?: string | null
           user_id?: string
         }
@@ -196,6 +199,39 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      email_snippets: {
+        Row: {
+          body: string
+          created_at: string
+          description: string | null
+          id: string
+          shortcode: string
+          updated_at: string
+          use_count: number
+          user_id: string
+        }
+        Insert: {
+          body: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          shortcode: string
+          updated_at?: string
+          use_count?: number
+          user_id: string
+        }
+        Update: {
+          body?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          shortcode?: string
+          updated_at?: string
+          use_count?: number
+          user_id?: string
+        }
+        Relationships: []
       }
       email_unsub_tokens: {
         Row: {
@@ -257,16 +293,21 @@ export type Database = {
           contact: string
           created_at: string
           email: string | null
+          engagement_score: number
           id: string
           last_emailed_at: string | null
+          last_engaged_at: string | null
           linkedin_url: string | null
+          merged_into_id: string | null
           niche: string | null
           notes: string | null
           phone: string | null
+          replied_at: string | null
           seq_step: number
           source: string | null
           status: Database["public"]["Enums"]["lead_status"]
           temperature: Database["public"]["Enums"]["lead_temp"]
+          timezone: string | null
           title: string | null
           updated_at: string
           user_id: string
@@ -278,16 +319,21 @@ export type Database = {
           contact: string
           created_at?: string
           email?: string | null
+          engagement_score?: number
           id?: string
           last_emailed_at?: string | null
+          last_engaged_at?: string | null
           linkedin_url?: string | null
+          merged_into_id?: string | null
           niche?: string | null
           notes?: string | null
           phone?: string | null
+          replied_at?: string | null
           seq_step?: number
           source?: string | null
           status?: Database["public"]["Enums"]["lead_status"]
           temperature?: Database["public"]["Enums"]["lead_temp"]
+          timezone?: string | null
           title?: string | null
           updated_at?: string
           user_id: string
@@ -299,16 +345,21 @@ export type Database = {
           contact?: string
           created_at?: string
           email?: string | null
+          engagement_score?: number
           id?: string
           last_emailed_at?: string | null
+          last_engaged_at?: string | null
           linkedin_url?: string | null
+          merged_into_id?: string | null
           niche?: string | null
           notes?: string | null
           phone?: string | null
+          replied_at?: string | null
           seq_step?: number
           source?: string | null
           status?: Database["public"]["Enums"]["lead_status"]
           temperature?: Database["public"]["Enums"]["lead_temp"]
+          timezone?: string | null
           title?: string | null
           updated_at?: string
           user_id?: string
@@ -348,6 +399,7 @@ export type Database = {
       }
       sequence_steps: {
         Row: {
+          ab_test_id: string | null
           body: string
           created_at: string
           delay_days: number
@@ -355,9 +407,11 @@ export type Database = {
           sequence_id: string
           step_order: number
           subject: string
+          subject_b: string | null
           user_id: string
         }
         Insert: {
+          ab_test_id?: string | null
           body: string
           created_at?: string
           delay_days?: number
@@ -365,9 +419,11 @@ export type Database = {
           sequence_id: string
           step_order: number
           subject: string
+          subject_b?: string | null
           user_id: string
         }
         Update: {
+          ab_test_id?: string | null
           body?: string
           created_at?: string
           delay_days?: number
@@ -375,6 +431,7 @@ export type Database = {
           sequence_id?: string
           step_order?: number
           subject?: string
+          subject_b?: string | null
           user_id?: string
         }
         Relationships: [
@@ -481,10 +538,14 @@ export type Database = {
       }
       sourcing_runs: {
         Row: {
+          attempt_count: number
           created_at: string
+          cursor: Json
           error: string | null
           icp: Json
           id: string
+          last_run_at: string | null
+          max_findings: number
           status: string
           step: string | null
           totals: Json
@@ -492,10 +553,14 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          attempt_count?: number
           created_at?: string
+          cursor?: Json
           error?: string | null
           icp?: Json
           id?: string
+          last_run_at?: string | null
+          max_findings?: number
           status?: string
           step?: string | null
           totals?: Json
@@ -503,10 +568,14 @@ export type Database = {
           user_id: string
         }
         Update: {
+          attempt_count?: number
           created_at?: string
+          cursor?: Json
           error?: string | null
           icp?: Json
           id?: string
+          last_run_at?: string | null
+          max_findings?: number
           status?: string
           step?: string | null
           totals?: Json
@@ -614,6 +683,90 @@ export type Database = {
           id?: string
           role?: Database["public"]["Enums"]["app_role"]
           user_id?: string
+        }
+        Relationships: []
+      }
+      user_smtp_settings: {
+        Row: {
+          created_at: string
+          daily_cap: number
+          from_email: string
+          from_name: string | null
+          host: string
+          id: string
+          imap_enabled: boolean
+          imap_host: string | null
+          imap_last_uid: number
+          imap_password_enc: string | null
+          imap_port: number | null
+          imap_username: string | null
+          last_error: string | null
+          last_reset_date: string
+          password_enc: string
+          port: number
+          reply_to: string | null
+          secure: boolean
+          sent_today: number
+          updated_at: string
+          user_id: string
+          username: string
+          verified_at: string | null
+          warmup_day: number
+          warmup_enabled: boolean
+        }
+        Insert: {
+          created_at?: string
+          daily_cap?: number
+          from_email: string
+          from_name?: string | null
+          host: string
+          id?: string
+          imap_enabled?: boolean
+          imap_host?: string | null
+          imap_last_uid?: number
+          imap_password_enc?: string | null
+          imap_port?: number | null
+          imap_username?: string | null
+          last_error?: string | null
+          last_reset_date?: string
+          password_enc: string
+          port?: number
+          reply_to?: string | null
+          secure?: boolean
+          sent_today?: number
+          updated_at?: string
+          user_id: string
+          username: string
+          verified_at?: string | null
+          warmup_day?: number
+          warmup_enabled?: boolean
+        }
+        Update: {
+          created_at?: string
+          daily_cap?: number
+          from_email?: string
+          from_name?: string | null
+          host?: string
+          id?: string
+          imap_enabled?: boolean
+          imap_host?: string | null
+          imap_last_uid?: number
+          imap_password_enc?: string | null
+          imap_port?: number | null
+          imap_username?: string | null
+          last_error?: string | null
+          last_reset_date?: string
+          password_enc?: string
+          port?: number
+          reply_to?: string | null
+          secure?: boolean
+          sent_today?: number
+          updated_at?: string
+          user_id?: string
+          username?: string
+          verified_at?: string | null
+          warmup_day?: number
+          warmup_enabled?: boolean
         }
         Relationships: []
       }
