@@ -110,12 +110,12 @@ export function LeadDrawer({ lead, open, onClose }: { lead: any | null; open: bo
         </SheetHeader>
 
         <Tabs defaultValue="overview" className="mt-4">
-          <TabsList className="grid grid-cols-4 w-full">
+          <TabsList className="grid grid-cols-3 w-full">
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="activity">Activity</TabsTrigger>
             <TabsTrigger value="notes">Notes</TabsTrigger>
-            <TabsTrigger value="draft">Draft</TabsTrigger>
           </TabsList>
+
 
           <TabsContent value="overview" className="space-y-3 pt-4">
             <div className="grid grid-cols-2 gap-3">
