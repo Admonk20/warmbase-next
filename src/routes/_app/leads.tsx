@@ -239,8 +239,8 @@ function Leads() {
         description="Manage every prospect in your pipeline."
         actions={
           <div className="flex flex-wrap gap-2">
-            <input type="file" accept=".csv" id="csv-upload" className="hidden" onChange={(e) => e.target.files?.[0] && importCsv(e.target.files[0])} />
-            <Button variant="outline" size="sm" onClick={() => document.getElementById("csv-upload")?.click()}><Upload className="size-4" /> Import CSV</Button>
+            <Button variant="outline" size="sm" onClick={() => setCsvOpen(true)}><Upload className="size-4" /> Import CSV</Button>
+
             <Button variant="outline" size="sm" onClick={exportCsv} disabled={!filtered.length}><Download className="size-4" /> Export</Button>
             <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) { setEditing(null); setForm(empty); } }}>
               <DialogTrigger asChild>
