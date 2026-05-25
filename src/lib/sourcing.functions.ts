@@ -150,7 +150,7 @@ ${deduped
           niche: p.niche ?? null,
           score: Math.max(1, Math.min(10, Number(p.score ?? 5))),
           summary: p.summary ?? null,
-          payload: p as unknown as Record<string, unknown>,
+          payload: JSON.parse(JSON.stringify(p)) as never,
         }))
         .filter((f) => !(f.email && existing.has(f.email)));
 
