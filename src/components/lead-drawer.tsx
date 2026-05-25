@@ -18,6 +18,8 @@ import { formatDistanceToNow } from "date-fns";
 
 const STATUSES = ["new", "contacted", "engaged", "meeting", "won", "lost"] as const;
 
+
+
 const EVENT_ICON: Record<string, any> = {
   sent: Send, opened: Mail, clicked: MousePointerClick, replied: Reply,
   bounced: AlertCircle, complained: AlertCircle, unsubscribed: AlertCircle, failed: AlertCircle,
