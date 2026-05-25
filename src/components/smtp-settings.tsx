@@ -1,8 +1,9 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Loader2, Save, Plug, CheckCircle2, AlertCircle } from "lucide-react";
+import { Loader2, Save, Plug, CheckCircle2, AlertCircle, Send } from "lucide-react";
 import { getSmtpSettings, saveSmtpSettings, testSmtpConnection } from "@/lib/smtp.functions";
+import { sendEmail } from "@/lib/email.functions";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -29,7 +30,9 @@ export function SmtpSettingsCard() {
   const getFn = useServerFn(getSmtpSettings);
   const saveFn = useServerFn(saveSmtpSettings);
   const testFn = useServerFn(testSmtpConnection);
+  const sendFn = useServerFn(sendEmail);
   const [form, setForm] = useState(empty);
+  const [testTo, setTestTo] = useState("");
 
   const { data } = useQuery({ queryKey: ["smtp"], queryFn: () => getFn() });
   useEffect(() => {
@@ -55,6 +58,16 @@ export function SmtpSettingsCard() {
   const test = useMutation({
     mutationFn: () => testFn({ data: { ...form, password: form.password || undefined, imap_password: form.imap_password || undefined } as any }),
     onSuccess: (r: any) => r.ok ? toast.success("Connection OK") : toast.error("Failed: " + r.error),
+    onError: (e: any) => toast.error(e.message),
+  });
+  const sendTest = useMutation({
+    mutationFn: () => sendFn({ data: {
+      to: testTo || form.from_email,
+      subject: "ColdBase Pro — test email ✅",
+      body: `If you can read this, your SMTP setup works.\n\nClick this tracked link to verify click tracking: https://example.com/coldbase-test\n\n— sent ${new Date().toLocaleString()}`,
+      ignoreSendWindow: true,
+    } }),
+    onSuccess: () => toast.success("Test email sent — check your inbox"),
     onError: (e: any) => toast.error(e.message),
   });
 
@@ -113,6 +126,21 @@ export function SmtpSettingsCard() {
           <Button onClick={() => save.mutate()} disabled={save.isPending}>{save.isPending && <Loader2 className="size-4 animate-spin" />}<Save className="size-4" /> Save</Button>
           <Button variant="outline" onClick={() => test.mutate()} disabled={test.isPending}>{test.isPending && <Loader2 className="size-4 animate-spin" />} Test connection</Button>
         </div>
+
+        <div className="border-t pt-3 space-y-2">
+          <Label className="text-sm">Send a real test email</Label>
+          <p className="text-xs text-muted-foreground">Sends via your saved SMTP. Includes a tracked link so you can verify the redirect endpoint. Leave blank to send to your "from" address.</p>
+          <div className="flex gap-2">
+            <Input type="email" placeholder={form.from_email || "you@example.com"} value={testTo} onChange={(e) => setTestTo(e.target.value)} />
+            <Button variant="secondary" onClick={() => sendTest.mutate()} disabled={sendTest.isPending || !data}>
+              {sendTest.isPending ? <Loader2 className="size-4 animate-spin" /> : <Send className="size-4" />} Send test
+            </Button>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
       </CardContent>
     </Card>
   );
