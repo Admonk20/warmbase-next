@@ -66,9 +66,13 @@ export const enrichLeadLinkedIn = createServerFn({ method: "POST" })
     const { data: lead } = await context.supabase.from("leads")
       .select("id, linkedin_url").eq("id", data.leadId).eq("user_id", context.userId).maybeSingle();
     if (!lead?.linkedin_url) throw new Error("No LinkedIn URL on lead");
-    const scrape = await firecrawlScrape(lead.linkedin_url);
+    const { assertSafeUrl } = await import("./url-guard");
+    const u = assertSafeUrl(lead.linkedin_url, ["linkedin.com"]);
+    if (!/^\/(in|company|pub)\//i.test(u.pathname)) {
+      throw new Error("Invalid LinkedIn URL");
+    }
+    const scrape = await firecrawlScrape(u.toString());
     const md = scrape.markdown ?? "";
-    // Cheap extraction — headline = first non-empty line
     const lines = md.split("\n").map((l) => l.trim()).filter(Boolean);
     const headline = lines[0] ?? null;
     const recentPost = lines.find((l) => l.length > 60 && l.length < 280) ?? null;

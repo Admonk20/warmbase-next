@@ -117,10 +117,12 @@ export const enrichCompany = createServerFn({ method: "POST" })
       }
     } catch {}
 
-    // Try to fetch site meta if we have a domain
+    // Try to fetch site meta if we have a public domain
     if (domain) {
       try {
-        const res = await fetch(`https://${domain}`, { signal: AbortSignal.timeout(5000) });
+        const { assertSafeDomain } = await import("./url-guard");
+        const safe = assertSafeDomain(domain);
+        const res = await fetch(`https://${safe}`, { signal: AbortSignal.timeout(5000) });
         const html = await res.text();
         const title = html.match(/<title>(.*?)<\/title>/i)?.[1]?.trim();
         const desc = html.match(/<meta\s+name=["']description["']\s+content=["']([^"']+)["']/i)?.[1]?.trim();
@@ -152,13 +154,13 @@ export const hunterSearch = createServerFn({ method: "POST" })
     let url = "";
     switch (data.action) {
       case "domain-search":
-        url = `${BASE}/domain-search?domain=${encodeURIComponent(data.domain ?? "")}&api_key=${key}&limit=10`; break;
+        url = `${BASE}/domain-search?domain=${encodeURIComponent(data.domain ?? "")}&limit=10`; break;
       case "email-finder":
-        url = `${BASE}/email-finder?domain=${encodeURIComponent(data.domain ?? "")}&first_name=${encodeURIComponent(data.firstName ?? "")}&last_name=${encodeURIComponent(data.lastName ?? "")}&api_key=${key}`; break;
+        url = `${BASE}/email-finder?domain=${encodeURIComponent(data.domain ?? "")}&first_name=${encodeURIComponent(data.firstName ?? "")}&last_name=${encodeURIComponent(data.lastName ?? "")}`; break;
       case "email-verifier":
-        url = `${BASE}/email-verifier?email=${encodeURIComponent(data.email ?? "")}&api_key=${key}`; break;
+        url = `${BASE}/email-verifier?email=${encodeURIComponent(data.email ?? "")}`; break;
     }
-    const res = await fetch(url);
+    const res = await fetch(url, { headers: { Authorization: `Bearer ${key}` } });
     const json = await res.text();
     return { raw: json };
   });

@@ -4,24 +4,16 @@ import { createClient } from "@supabase/supabase-js";
 /**
  * Resend webhook receiver. Configure in Resend dashboard:
  *   URL:  https://<your-domain>/api/public/hooks/email-events
- *   Send signing secret as ?key=<RESEND_WEBHOOK_SECRET> query param,
- *   or set the X-Webhook-Key header.
- *
- * Accepts events: email.bounced, email.complained, email.opened, email.clicked,
- * email.delivered, email.delivery_delayed. Hard bounces and complaints are
- * auto-added to the user's suppression list.
- *
- * The Resend payload includes the recipient and our metadata. We look up the
- * matching email_event by message_id in metadata to find user_id + lead_id.
+ *   Send the signing secret via the `X-Webhook-Key` header (header-only;
+ *   query-param auth is rejected to keep the secret out of access logs).
  */
 export const Route = createFileRoute("/api/public/hooks/email-events")({
   server: {
     handlers: {
       POST: async ({ request }) => {
-        const url = new URL(request.url);
-        const provided = url.searchParams.get("key") ?? request.headers.get("x-webhook-key");
+        const provided = request.headers.get("x-webhook-key");
         const expected = process.env.RESEND_WEBHOOK_SECRET;
-        if (!expected || provided !== expected) {
+        if (!expected || !provided || provided !== expected) {
           return new Response("Unauthorized", { status: 401 });
         }
 

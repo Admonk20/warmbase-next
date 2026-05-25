@@ -16,6 +16,7 @@ import { SmtpSettingsCard } from "@/components/smtp-settings";
 import { SuppressionsCard } from "@/components/suppressions-card";
 import { SendPreferencesCard } from "@/components/send-preferences-card";
 import { InboxHealthCard } from "@/components/inbox-health-card";
+import { saveUserApiKey, deleteUserApiKey } from "@/lib/api-keys.functions";
 
 
 
@@ -69,11 +70,7 @@ function Settings() {
   const addKey = useMutation({
     mutationFn: async () => {
       if (!keyForm.value.trim()) throw new Error("Value required");
-      const supabase = await getBrowserSupabase();
-      const { error } = await supabase.from("user_api_keys").insert({
-        user_id: user!.id, provider: keyForm.provider, label: keyForm.label || null, value_enc: keyForm.value.trim(),
-      });
-      if (error) throw error;
+      await saveUserApiKey({ data: { provider: keyForm.provider as any, value: keyForm.value.trim(), label: keyForm.label || null } });
     },
     onSuccess: () => { toast.success("Key added"); setKeyForm({ provider: "openai", value: "", label: "" }); qc.invalidateQueries({ queryKey: ["api-keys"] }); },
     onError: (e: any) => toast.error(e.message),
@@ -81,9 +78,7 @@ function Settings() {
 
   const removeKey = useMutation({
     mutationFn: async (id: string) => {
-      const supabase = await getBrowserSupabase();
-      const { error } = await supabase.from("user_api_keys").delete().eq("id", id);
-      if (error) throw error;
+      await deleteUserApiKey({ data: { id } });
     },
     onSuccess: () => { toast.success("Removed"); qc.invalidateQueries({ queryKey: ["api-keys"] }); },
   });
