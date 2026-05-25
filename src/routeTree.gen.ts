@@ -14,10 +14,8 @@ import { Route as AppRouteImport } from './routes/_app'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AppSettingsRouteImport } from './routes/_app/settings'
 import { Route as AppSequencesRouteImport } from './routes/_app/sequences'
-import { Route as AppPlaybookRouteImport } from './routes/_app/playbook'
 import { Route as AppLeadsRouteImport } from './routes/_app/leads'
 import { Route as AppLeadFinderRouteImport } from './routes/_app/lead-finder'
-import { Route as AppEmailFinderRouteImport } from './routes/_app/email-finder'
 import { Route as AppDeliverabilityRouteImport } from './routes/_app/deliverability'
 import { Route as AppDashboardRouteImport } from './routes/_app/dashboard'
 import { Route as AppCampaignsRouteImport } from './routes/_app/campaigns'
@@ -49,11 +47,6 @@ const AppSequencesRoute = AppSequencesRouteImport.update({
   path: '/sequences',
   getParentRoute: () => AppRoute,
 } as any)
-const AppPlaybookRoute = AppPlaybookRouteImport.update({
-  id: '/playbook',
-  path: '/playbook',
-  getParentRoute: () => AppRoute,
-} as any)
 const AppLeadsRoute = AppLeadsRouteImport.update({
   id: '/leads',
   path: '/leads',
@@ -62,11 +55,6 @@ const AppLeadsRoute = AppLeadsRouteImport.update({
 const AppLeadFinderRoute = AppLeadFinderRouteImport.update({
   id: '/lead-finder',
   path: '/lead-finder',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppEmailFinderRoute = AppEmailFinderRouteImport.update({
-  id: '/email-finder',
-  path: '/email-finder',
   getParentRoute: () => AppRoute,
 } as any)
 const AppDeliverabilityRoute = AppDeliverabilityRouteImport.update({
@@ -107,10 +95,8 @@ export interface FileRoutesByFullPath {
   '/campaigns': typeof AppCampaignsRoute
   '/dashboard': typeof AppDashboardRoute
   '/deliverability': typeof AppDeliverabilityRoute
-  '/email-finder': typeof AppEmailFinderRoute
   '/lead-finder': typeof AppLeadFinderRoute
   '/leads': typeof AppLeadsRoute
-  '/playbook': typeof AppPlaybookRoute
   '/sequences': typeof AppSequencesRoute
   '/settings': typeof AppSettingsRoute
   '/api/public/unsubscribe': typeof ApiPublicUnsubscribeRoute
@@ -123,10 +109,8 @@ export interface FileRoutesByTo {
   '/campaigns': typeof AppCampaignsRoute
   '/dashboard': typeof AppDashboardRoute
   '/deliverability': typeof AppDeliverabilityRoute
-  '/email-finder': typeof AppEmailFinderRoute
   '/lead-finder': typeof AppLeadFinderRoute
   '/leads': typeof AppLeadsRoute
-  '/playbook': typeof AppPlaybookRoute
   '/sequences': typeof AppSequencesRoute
   '/settings': typeof AppSettingsRoute
   '/api/public/unsubscribe': typeof ApiPublicUnsubscribeRoute
@@ -141,10 +125,8 @@ export interface FileRoutesById {
   '/_app/campaigns': typeof AppCampaignsRoute
   '/_app/dashboard': typeof AppDashboardRoute
   '/_app/deliverability': typeof AppDeliverabilityRoute
-  '/_app/email-finder': typeof AppEmailFinderRoute
   '/_app/lead-finder': typeof AppLeadFinderRoute
   '/_app/leads': typeof AppLeadsRoute
-  '/_app/playbook': typeof AppPlaybookRoute
   '/_app/sequences': typeof AppSequencesRoute
   '/_app/settings': typeof AppSettingsRoute
   '/api/public/unsubscribe': typeof ApiPublicUnsubscribeRoute
@@ -159,10 +141,8 @@ export interface FileRouteTypes {
     | '/campaigns'
     | '/dashboard'
     | '/deliverability'
-    | '/email-finder'
     | '/lead-finder'
     | '/leads'
-    | '/playbook'
     | '/sequences'
     | '/settings'
     | '/api/public/unsubscribe'
@@ -175,10 +155,8 @@ export interface FileRouteTypes {
     | '/campaigns'
     | '/dashboard'
     | '/deliverability'
-    | '/email-finder'
     | '/lead-finder'
     | '/leads'
-    | '/playbook'
     | '/sequences'
     | '/settings'
     | '/api/public/unsubscribe'
@@ -192,10 +170,8 @@ export interface FileRouteTypes {
     | '/_app/campaigns'
     | '/_app/dashboard'
     | '/_app/deliverability'
-    | '/_app/email-finder'
     | '/_app/lead-finder'
     | '/_app/leads'
-    | '/_app/playbook'
     | '/_app/sequences'
     | '/_app/settings'
     | '/api/public/unsubscribe'
@@ -249,13 +225,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppSequencesRouteImport
       parentRoute: typeof AppRoute
     }
-    '/_app/playbook': {
-      id: '/_app/playbook'
-      path: '/playbook'
-      fullPath: '/playbook'
-      preLoaderRoute: typeof AppPlaybookRouteImport
-      parentRoute: typeof AppRoute
-    }
     '/_app/leads': {
       id: '/_app/leads'
       path: '/leads'
@@ -268,13 +237,6 @@ declare module '@tanstack/react-router' {
       path: '/lead-finder'
       fullPath: '/lead-finder'
       preLoaderRoute: typeof AppLeadFinderRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/_app/email-finder': {
-      id: '/_app/email-finder'
-      path: '/email-finder'
-      fullPath: '/email-finder'
-      preLoaderRoute: typeof AppEmailFinderRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/deliverability': {
@@ -326,10 +288,8 @@ interface AppRouteChildren {
   AppCampaignsRoute: typeof AppCampaignsRoute
   AppDashboardRoute: typeof AppDashboardRoute
   AppDeliverabilityRoute: typeof AppDeliverabilityRoute
-  AppEmailFinderRoute: typeof AppEmailFinderRoute
   AppLeadFinderRoute: typeof AppLeadFinderRoute
   AppLeadsRoute: typeof AppLeadsRoute
-  AppPlaybookRoute: typeof AppPlaybookRoute
   AppSequencesRoute: typeof AppSequencesRoute
   AppSettingsRoute: typeof AppSettingsRoute
 }
@@ -338,10 +298,8 @@ const AppRouteChildren: AppRouteChildren = {
   AppCampaignsRoute: AppCampaignsRoute,
   AppDashboardRoute: AppDashboardRoute,
   AppDeliverabilityRoute: AppDeliverabilityRoute,
-  AppEmailFinderRoute: AppEmailFinderRoute,
   AppLeadFinderRoute: AppLeadFinderRoute,
   AppLeadsRoute: AppLeadsRoute,
-  AppPlaybookRoute: AppPlaybookRoute,
   AppSequencesRoute: AppSequencesRoute,
   AppSettingsRoute: AppSettingsRoute,
 }
@@ -359,3 +317,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
