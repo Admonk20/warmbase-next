@@ -21,6 +21,9 @@ import { Route as AppEmailFinderRouteImport } from './routes/_app/email-finder'
 import { Route as AppDeliverabilityRouteImport } from './routes/_app/deliverability'
 import { Route as AppDashboardRouteImport } from './routes/_app/dashboard'
 import { Route as AppCampaignsRouteImport } from './routes/_app/campaigns'
+import { Route as ApiPublicUnsubscribeRouteImport } from './routes/api/public/unsubscribe'
+import { Route as ApiPublicTrackOpenDotgifRouteImport } from './routes/api/public/track/open[.]gif'
+import { Route as ApiPublicTrackClickRouteImport } from './routes/api/public/track/click'
 
 const AuthRoute = AuthRouteImport.update({
   id: '/auth',
@@ -81,6 +84,22 @@ const AppCampaignsRoute = AppCampaignsRouteImport.update({
   path: '/campaigns',
   getParentRoute: () => AppRoute,
 } as any)
+const ApiPublicUnsubscribeRoute = ApiPublicUnsubscribeRouteImport.update({
+  id: '/api/public/unsubscribe',
+  path: '/api/public/unsubscribe',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPublicTrackOpenDotgifRoute =
+  ApiPublicTrackOpenDotgifRouteImport.update({
+    id: '/api/public/track/open.gif',
+    path: '/api/public/track/open.gif',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiPublicTrackClickRoute = ApiPublicTrackClickRouteImport.update({
+  id: '/api/public/track/click',
+  path: '/api/public/track/click',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -94,6 +113,9 @@ export interface FileRoutesByFullPath {
   '/playbook': typeof AppPlaybookRoute
   '/sequences': typeof AppSequencesRoute
   '/settings': typeof AppSettingsRoute
+  '/api/public/unsubscribe': typeof ApiPublicUnsubscribeRoute
+  '/api/public/track/click': typeof ApiPublicTrackClickRoute
+  '/api/public/track/open.gif': typeof ApiPublicTrackOpenDotgifRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -107,6 +129,9 @@ export interface FileRoutesByTo {
   '/playbook': typeof AppPlaybookRoute
   '/sequences': typeof AppSequencesRoute
   '/settings': typeof AppSettingsRoute
+  '/api/public/unsubscribe': typeof ApiPublicUnsubscribeRoute
+  '/api/public/track/click': typeof ApiPublicTrackClickRoute
+  '/api/public/track/open.gif': typeof ApiPublicTrackOpenDotgifRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -122,6 +147,9 @@ export interface FileRoutesById {
   '/_app/playbook': typeof AppPlaybookRoute
   '/_app/sequences': typeof AppSequencesRoute
   '/_app/settings': typeof AppSettingsRoute
+  '/api/public/unsubscribe': typeof ApiPublicUnsubscribeRoute
+  '/api/public/track/click': typeof ApiPublicTrackClickRoute
+  '/api/public/track/open.gif': typeof ApiPublicTrackOpenDotgifRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -137,6 +165,9 @@ export interface FileRouteTypes {
     | '/playbook'
     | '/sequences'
     | '/settings'
+    | '/api/public/unsubscribe'
+    | '/api/public/track/click'
+    | '/api/public/track/open.gif'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -150,6 +181,9 @@ export interface FileRouteTypes {
     | '/playbook'
     | '/sequences'
     | '/settings'
+    | '/api/public/unsubscribe'
+    | '/api/public/track/click'
+    | '/api/public/track/open.gif'
   id:
     | '__root__'
     | '/'
@@ -164,12 +198,18 @@ export interface FileRouteTypes {
     | '/_app/playbook'
     | '/_app/sequences'
     | '/_app/settings'
+    | '/api/public/unsubscribe'
+    | '/api/public/track/click'
+    | '/api/public/track/open.gif'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AppRoute: typeof AppRouteWithChildren
   AuthRoute: typeof AuthRoute
+  ApiPublicUnsubscribeRoute: typeof ApiPublicUnsubscribeRoute
+  ApiPublicTrackClickRoute: typeof ApiPublicTrackClickRoute
+  ApiPublicTrackOpenDotgifRoute: typeof ApiPublicTrackOpenDotgifRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -258,6 +298,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppCampaignsRouteImport
       parentRoute: typeof AppRoute
     }
+    '/api/public/unsubscribe': {
+      id: '/api/public/unsubscribe'
+      path: '/api/public/unsubscribe'
+      fullPath: '/api/public/unsubscribe'
+      preLoaderRoute: typeof ApiPublicUnsubscribeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/track/open.gif': {
+      id: '/api/public/track/open.gif'
+      path: '/api/public/track/open.gif'
+      fullPath: '/api/public/track/open.gif'
+      preLoaderRoute: typeof ApiPublicTrackOpenDotgifRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/track/click': {
+      id: '/api/public/track/click'
+      path: '/api/public/track/click'
+      fullPath: '/api/public/track/click'
+      preLoaderRoute: typeof ApiPublicTrackClickRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -291,7 +352,20 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AppRoute: AppRouteWithChildren,
   AuthRoute: AuthRoute,
+  ApiPublicUnsubscribeRoute: ApiPublicUnsubscribeRoute,
+  ApiPublicTrackClickRoute: ApiPublicTrackClickRoute,
+  ApiPublicTrackOpenDotgifRoute: ApiPublicTrackOpenDotgifRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
