@@ -1,7 +1,21 @@
 // Server-only LLM helpers. Defaults to Lovable AI Gateway (no key required).
 // If user has an OpenAI key in user_api_keys, callers may pass it explicitly to use OpenAI directly.
 
+import { decryptSecret } from "./crypto.server";
+
 const LOVABLE_GATEWAY_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
+
+async function tryDecrypt(value: string | null | undefined): Promise<string | null> {
+  if (!value) return null;
+  // Encrypted payloads start with "v1:" (see crypto.server.ts). Anything else
+  // is legacy plaintext — return as-is so existing keys keep working until rotated.
+  if (!value.startsWith("v1:")) return value;
+  try {
+    return await decryptSecret(value);
+  } catch {
+    return null;
+  }
+}
 
 type ChatMsg = { role: "system" | "user" | "assistant"; content: string };
 
@@ -77,7 +91,21 @@ export async function getUserKey(
     .from("user_api_keys")
     .select("value_enc")
     .eq("user_id", userId)
+    .eq("provider", "openai")
+    .maybeSingle();
+  return tryDecrypt(data?.value_enc);
+}
+
+export async function getUserKey(
+  supabase: { from: (t: string) => any },
+  userId: string,
+  provider: string,
+): Promise<string | null> {
+  const { data } = await supabase
+    .from("user_api_keys")
+    .select("value_enc")
+    .eq("user_id", userId)
     .eq("provider", provider)
     .maybeSingle();
-  return data?.value_enc ?? null;
+  return tryDecrypt(data?.value_enc);
 }
