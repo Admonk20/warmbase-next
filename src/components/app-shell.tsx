@@ -1,5 +1,5 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { LayoutDashboard, Users, Send, Workflow, BarChart3, Settings, LogOut, Mail, Search, Sparkles, KanbanSquare } from "lucide-react";
+import { LayoutDashboard, Users, Send, Workflow, BarChart3, Settings, LogOut, Mail, Sparkles, KanbanSquare } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -7,15 +7,15 @@ import { AssistantWidget } from "@/components/assistant-widget";
 
 const nav = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { to: "/pipeline", label: "Pipeline", icon: KanbanSquare },
-  { to: "/leads", label: "Leads", icon: Users },
   { to: "/sourcing", label: "Sourcing", icon: Sparkles },
-  { to: "/lead-finder", label: "Lead Finder", icon: Search },
+  { to: "/leads", label: "Leads", icon: Users },
+  { to: "/pipeline", label: "Pipeline", icon: KanbanSquare },
   { to: "/sequences", label: "Sequences", icon: Workflow },
   { to: "/campaigns", label: "Campaigns", icon: Send },
   { to: "/deliverability", label: "Deliverability", icon: BarChart3 },
   { to: "/settings", label: "Settings", icon: Settings },
 ];
+
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const { user, signOut } = useAuth();
