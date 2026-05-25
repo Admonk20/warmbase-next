@@ -73,27 +73,7 @@ export async function getUserOpenAIKey(
   supabase: { from: (t: string) => any },
   userId: string,
 ): Promise<string | null> {
-  const { data } = await supabase
-    .from("user_api_keys")
-    .select("value_enc")
-    .eq("user_id", userId)
-    .eq("provider", "openai")
-    .maybeSingle();
-  return data?.value_enc ?? null;
-}
-
-export async function getUserKey(
-  supabase: { from: (t: string) => any },
-  userId: string,
-  provider: string,
-): Promise<string | null> {
-  const { data } = await supabase
-    .from("user_api_keys")
-    .select("value_enc")
-    .eq("user_id", userId)
-    .eq("provider", "openai")
-    .maybeSingle();
-  return tryDecrypt(data?.value_enc);
+  return getUserKey(supabase, userId, "openai");
 }
 
 export async function getUserKey(
