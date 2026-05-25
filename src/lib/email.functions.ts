@@ -239,6 +239,8 @@ export const sendEmail = createServerFn({ method: "POST" })
       campaignId: z.string().uuid().optional(),
       fromName: z.string().max(120).optional(),
       fromEmail: z.string().email().max(255).optional(),
+      ignoreSendWindow: z.boolean().optional(),
+      trackLinks: z.boolean().optional(),
     }).parse,
   )
   .handler(async ({ data, context }) => {
@@ -263,6 +265,30 @@ export const sendEmail = createServerFn({ method: "POST" })
       });
       throw new Error(`${to} is on the suppression list (${reason}).`);
     }
+
+    // 1b. Reply-aware pause + send-window check
+    if (data.leadId) {
+      const { data: lead } = await context.supabase.from("leads")
+        .select("sequence_paused, replied_at, timezone, best_send_hour")
+        .eq("id", data.leadId).maybeSingle();
+      if (lead?.sequence_paused || lead?.replied_at) {
+        throw new Error("Lead has replied or sequence is paused — auto-skipping.");
+      }
+      if (!data.ignoreSendWindow) {
+        const { data: prefs } = await context.supabase.from("user_send_preferences")
+          .select("*").eq("user_id", context.userId).maybeSingle();
+        const { sendabilityCheck } = await import("./send-timing.server");
+        const check = sendabilityCheck({
+          prefs: prefs ?? null,
+          leadTimezone: lead?.timezone ?? null,
+          leadBestHour: lead?.best_send_hour ?? null,
+        });
+        if (!check.allowed) {
+          throw new Error(`Outside sending window (${check.reason}). Set ignoreSendWindow to override.`);
+        }
+      }
+    }
+
 
 
     // 2. Provider: prefer per-user SMTP, fall back to Resend.
