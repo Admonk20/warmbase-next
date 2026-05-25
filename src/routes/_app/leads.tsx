@@ -363,6 +363,9 @@ function Leads() {
       </Card>
 
       <LeadDrafter lead={drafterLead} open={!!drafterLead} onClose={() => setDrafterLead(null)} />
+      <LeadDrawer lead={drawerLead} open={!!drawerLead} onClose={() => setDrawerLead(null)} />
+      <CsvImporter open={csvOpen} onOpenChange={setCsvOpen} onDone={() => { qc.invalidateQueries({ queryKey: ["leads"] }); qc.invalidateQueries({ queryKey: ["leads-count"] }); }} />
+
     </div>
   );
 }
