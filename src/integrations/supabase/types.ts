@@ -197,6 +197,59 @@ export type Database = {
           },
         ]
       }
+      email_unsub_tokens: {
+        Row: {
+          created_at: string
+          email: string
+          token: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          token: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          token?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      lead_notes: {
+        Row: {
+          body: string
+          created_at: string
+          id: string
+          lead_id: string
+          user_id: string
+        }
+        Insert: {
+          body: string
+          created_at?: string
+          id?: string
+          lead_id: string
+          user_id: string
+        }
+        Update: {
+          body?: string
+          created_at?: string
+          id?: string
+          lead_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lead_notes_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       leads: {
         Row: {
           company: string | null
@@ -364,6 +417,104 @@ export type Database = {
         }
         Relationships: []
       }
+      sourcing_findings: {
+        Row: {
+          company: string | null
+          contact: string | null
+          created_at: string
+          email: string | null
+          id: string
+          lead_id: string | null
+          linkedin_url: string | null
+          niche: string | null
+          payload: Json
+          run_id: string
+          score: number
+          source_url: string | null
+          summary: string | null
+          title: string | null
+          user_id: string
+        }
+        Insert: {
+          company?: string | null
+          contact?: string | null
+          created_at?: string
+          email?: string | null
+          id?: string
+          lead_id?: string | null
+          linkedin_url?: string | null
+          niche?: string | null
+          payload?: Json
+          run_id: string
+          score?: number
+          source_url?: string | null
+          summary?: string | null
+          title?: string | null
+          user_id: string
+        }
+        Update: {
+          company?: string | null
+          contact?: string | null
+          created_at?: string
+          email?: string | null
+          id?: string
+          lead_id?: string | null
+          linkedin_url?: string | null
+          niche?: string | null
+          payload?: Json
+          run_id?: string
+          score?: number
+          source_url?: string | null
+          summary?: string | null
+          title?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sourcing_findings_run_id_fkey"
+            columns: ["run_id"]
+            isOneToOne: false
+            referencedRelation: "sourcing_runs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sourcing_runs: {
+        Row: {
+          created_at: string
+          error: string | null
+          icp: Json
+          id: string
+          status: string
+          step: string | null
+          totals: Json
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          error?: string | null
+          icp?: Json
+          id?: string
+          status?: string
+          step?: string | null
+          totals?: Json
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          error?: string | null
+          icp?: Json
+          id?: string
+          status?: string
+          step?: string | null
+          totals?: Json
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       templates: {
         Row: {
           body: string
@@ -489,6 +640,7 @@ export type Database = {
         | "replied"
         | "unsubscribed"
         | "complained"
+        | "failed"
       lead_status: "new" | "contacted" | "engaged" | "meeting" | "won" | "lost"
       lead_temp: "cold" | "warm" | "hot"
     }
@@ -627,6 +779,7 @@ export const Constants = {
         "replied",
         "unsubscribed",
         "complained",
+        "failed",
       ],
       lead_status: ["new", "contacted", "engaged", "meeting", "won", "lost"],
       lead_temp: ["cold", "warm", "hot"],
