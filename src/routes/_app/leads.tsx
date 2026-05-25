@@ -3,12 +3,14 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { Plus, Trash2, Loader2, Pencil, Mail, Download, Upload, Sparkles, Search } from "lucide-react";
-import { getBrowserSupabase } from "@/integrations/supabase/browser-client";
+import { Plus, Trash2, Loader2, Mail, Download, Upload, Sparkles, Search } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import { personalizeBatch } from "@/lib/email.functions";
 import { PageHeader } from "@/components/page-header";
 import { LeadDrafter } from "@/components/lead-drafter";
+import { LeadDrawer } from "@/components/lead-drawer";
+import { CsvImporter } from "@/components/csv-importer";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -23,6 +25,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_app/leads")({ component: Leads });
+
 
 const STATUSES = ["new", "contacted", "engaged", "meeting", "won", "lost"] as const;
 type Status = typeof STATUSES[number];
