@@ -158,8 +158,8 @@ export const hunterSearch = createServerFn({ method: "POST" })
       case "email-verifier":
         url = `${BASE}/email-verifier?email=${encodeURIComponent(data.email ?? "")}&api_key=${key}`; break;
     }
-    const res = await fetch(url);
-    return (await res.json()) as Record<string, unknown> as { [k: string]: unknown };
+    const json = await res.text();
+    return { raw: json };
   });
 
 export const cleanLeads = createServerFn({ method: "POST" })
