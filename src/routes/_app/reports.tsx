@@ -6,7 +6,9 @@ import { PageHeader } from "@/components/page-header";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { weeklyDigest, exportLeadsCsv, exportActivityCsv } from "@/lib/export.functions";
+import { funnel, cohorts } from "@/lib/analytics.functions";
 import { toast } from "sonner";
+
 
 export const Route = createFileRoute("/_app/reports")({ component: Reports });
 
