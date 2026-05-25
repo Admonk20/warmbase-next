@@ -61,7 +61,7 @@ export const classifyReply = createServerFn({ method: "POST" })
         not_now: "contacted",
       };
       if (statusMap[label]) {
-        await context.supabase.from("leads").update({ status: statusMap[label] }).eq("id", data.leadId);
+        await context.supabase.from("leads").update({ status: statusMap[label] as any }).eq("id", data.leadId);
       }
       if (label === "unsubscribe") {
         const { data: lead } = await context.supabase.from("leads").select("email").eq("id", data.leadId).maybeSingle();
