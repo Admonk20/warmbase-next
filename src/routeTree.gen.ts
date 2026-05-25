@@ -14,6 +14,7 @@ import { Route as AppRouteImport } from './routes/_app'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AppSettingsRouteImport } from './routes/_app/settings'
 import { Route as AppSequencesRouteImport } from './routes/_app/sequences'
+import { Route as AppPipelineRouteImport } from './routes/_app/pipeline'
 import { Route as AppLeadsRouteImport } from './routes/_app/leads'
 import { Route as AppLeadFinderRouteImport } from './routes/_app/lead-finder'
 import { Route as AppDeliverabilityRouteImport } from './routes/_app/deliverability'
@@ -45,6 +46,11 @@ const AppSettingsRoute = AppSettingsRouteImport.update({
 const AppSequencesRoute = AppSequencesRouteImport.update({
   id: '/sequences',
   path: '/sequences',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppPipelineRoute = AppPipelineRouteImport.update({
+  id: '/pipeline',
+  path: '/pipeline',
   getParentRoute: () => AppRoute,
 } as any)
 const AppLeadsRoute = AppLeadsRouteImport.update({
@@ -97,6 +103,7 @@ export interface FileRoutesByFullPath {
   '/deliverability': typeof AppDeliverabilityRoute
   '/lead-finder': typeof AppLeadFinderRoute
   '/leads': typeof AppLeadsRoute
+  '/pipeline': typeof AppPipelineRoute
   '/sequences': typeof AppSequencesRoute
   '/settings': typeof AppSettingsRoute
   '/api/public/unsubscribe': typeof ApiPublicUnsubscribeRoute
@@ -111,6 +118,7 @@ export interface FileRoutesByTo {
   '/deliverability': typeof AppDeliverabilityRoute
   '/lead-finder': typeof AppLeadFinderRoute
   '/leads': typeof AppLeadsRoute
+  '/pipeline': typeof AppPipelineRoute
   '/sequences': typeof AppSequencesRoute
   '/settings': typeof AppSettingsRoute
   '/api/public/unsubscribe': typeof ApiPublicUnsubscribeRoute
@@ -127,6 +135,7 @@ export interface FileRoutesById {
   '/_app/deliverability': typeof AppDeliverabilityRoute
   '/_app/lead-finder': typeof AppLeadFinderRoute
   '/_app/leads': typeof AppLeadsRoute
+  '/_app/pipeline': typeof AppPipelineRoute
   '/_app/sequences': typeof AppSequencesRoute
   '/_app/settings': typeof AppSettingsRoute
   '/api/public/unsubscribe': typeof ApiPublicUnsubscribeRoute
@@ -143,6 +152,7 @@ export interface FileRouteTypes {
     | '/deliverability'
     | '/lead-finder'
     | '/leads'
+    | '/pipeline'
     | '/sequences'
     | '/settings'
     | '/api/public/unsubscribe'
@@ -157,6 +167,7 @@ export interface FileRouteTypes {
     | '/deliverability'
     | '/lead-finder'
     | '/leads'
+    | '/pipeline'
     | '/sequences'
     | '/settings'
     | '/api/public/unsubscribe'
@@ -172,6 +183,7 @@ export interface FileRouteTypes {
     | '/_app/deliverability'
     | '/_app/lead-finder'
     | '/_app/leads'
+    | '/_app/pipeline'
     | '/_app/sequences'
     | '/_app/settings'
     | '/api/public/unsubscribe'
@@ -223,6 +235,13 @@ declare module '@tanstack/react-router' {
       path: '/sequences'
       fullPath: '/sequences'
       preLoaderRoute: typeof AppSequencesRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/pipeline': {
+      id: '/_app/pipeline'
+      path: '/pipeline'
+      fullPath: '/pipeline'
+      preLoaderRoute: typeof AppPipelineRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/leads': {
@@ -290,6 +309,7 @@ interface AppRouteChildren {
   AppDeliverabilityRoute: typeof AppDeliverabilityRoute
   AppLeadFinderRoute: typeof AppLeadFinderRoute
   AppLeadsRoute: typeof AppLeadsRoute
+  AppPipelineRoute: typeof AppPipelineRoute
   AppSequencesRoute: typeof AppSequencesRoute
   AppSettingsRoute: typeof AppSettingsRoute
 }
@@ -300,6 +320,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppDeliverabilityRoute: AppDeliverabilityRoute,
   AppLeadFinderRoute: AppLeadFinderRoute,
   AppLeadsRoute: AppLeadsRoute,
+  AppPipelineRoute: AppPipelineRoute,
   AppSequencesRoute: AppSequencesRoute,
   AppSettingsRoute: AppSettingsRoute,
 }
