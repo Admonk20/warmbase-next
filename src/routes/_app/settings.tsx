@@ -105,6 +105,9 @@ function Settings() {
 
       <SmtpSettingsCard />
 
+      <SuppressionsCard />
+
+
       <Card>
         <CardHeader><CardTitle className="text-base flex items-center gap-2"><KeyRound className="size-4" /> API keys</CardTitle></CardHeader>
         <CardContent className="space-y-4">
