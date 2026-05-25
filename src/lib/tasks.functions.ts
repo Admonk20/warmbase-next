@@ -11,7 +11,7 @@ export const listTasks = createServerFn({ method: "POST" })
     }).parse,
   )
   .handler(async ({ data, context }) => {
-    let q = context.supabase.from("tasks")
+    let q: any = context.supabase.from("tasks")
       .select("id, title, notes, due_at, completed_at, priority, lead_id, created_at")
       .eq("user_id", context.userId)
       .order("due_at", { ascending: true, nullsFirst: false })
@@ -30,7 +30,8 @@ export const listTasks = createServerFn({ method: "POST" })
     }
     const { data: rows, error } = await q;
     if (error) throw new Error(error.message);
-    return { tasks: rows ?? [] };
+    return { tasks: (rows ?? []) as Array<{ id: string; title: string; notes: string | null; due_at: string | null; completed_at: string | null; priority: number; lead_id: string | null; created_at: string }> };
+
   });
 
 export const createTask = createServerFn({ method: "POST" })
