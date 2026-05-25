@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { getBrowserSupabase } from "@/integrations/supabase/browser-client";
 import { PageHeader } from "@/components/page-header";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Users, Send, MailOpen, Reply, TrendingUp } from "lucide-react";
@@ -26,6 +26,7 @@ function Dashboard() {
   const { data: leads } = useQuery({
     queryKey: ["leads-count"],
     queryFn: async () => {
+      const supabase = await getBrowserSupabase();
       const { count } = await supabase.from("leads").select("*", { count: "exact", head: true });
       return count ?? 0;
     },
@@ -33,6 +34,7 @@ function Dashboard() {
   const { data: events } = useQuery({
     queryKey: ["events-stats"],
     queryFn: async () => {
+      const supabase = await getBrowserSupabase();
       const { data } = await supabase.from("email_events").select("event_type");
       const arr = data ?? [];
       const c = (t: string) => arr.filter((r: any) => r.event_type === t).length;
@@ -42,6 +44,7 @@ function Dashboard() {
   const { data: pipeline } = useQuery({
     queryKey: ["pipeline"],
     queryFn: async () => {
+      const supabase = await getBrowserSupabase();
       const { data } = await supabase.from("leads").select("status");
       const arr = data ?? [];
       const c = (s: string) => arr.filter((r: any) => r.status === s).length;

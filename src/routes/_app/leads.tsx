@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { z } from "zod";
 import { Plus, Trash2, Loader2 } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { getBrowserSupabase } from "@/integrations/supabase/browser-client";
 import { useAuth } from "@/hooks/use-auth";
 import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
@@ -47,6 +47,7 @@ function Leads() {
   const { data: leads, isLoading } = useQuery({
     queryKey: ["leads"],
     queryFn: async () => {
+      const supabase = await getBrowserSupabase();
       const { data, error } = await supabase.from("leads").select("*").order("created_at", { ascending: false });
       if (error) throw error;
       return data;
@@ -55,6 +56,7 @@ function Leads() {
 
   const create = useMutation({
     mutationFn: async () => {
+      const supabase = await getBrowserSupabase();
       const parsed = leadSchema.parse(form);
       const { error } = await supabase.from("leads").insert({
         user_id: user!.id,
@@ -80,6 +82,7 @@ function Leads() {
 
   const updateStatus = useMutation({
     mutationFn: async ({ id, status }: { id: string; status: string }) => {
+      const supabase = await getBrowserSupabase();
       const { error } = await supabase.from("leads").update({ status: status as any }).eq("id", id);
       if (error) throw error;
     },
@@ -92,6 +95,7 @@ function Leads() {
 
   const remove = useMutation({
     mutationFn: async (id: string) => {
+      const supabase = await getBrowserSupabase();
       const { error } = await supabase.from("leads").delete().eq("id", id);
       if (error) throw error;
     },

@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/hooks/use-auth";
-import { supabase } from "@/integrations/supabase/client";
+import { getBrowserSupabase } from "@/integrations/supabase/browser-client";
 import { PageHeader } from "@/components/page-header";
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -20,15 +20,18 @@ function Settings() {
 
   useEffect(() => {
     if (!user) return;
-    supabase.from("profiles").select("*").eq("id", user.id).maybeSingle().then(({ data }) => {
+    void (async () => {
+      const supabase = await getBrowserSupabase();
+      const { data } = await supabase.from("profiles").select("*").eq("id", user.id).maybeSingle();
       if (data) setProfile({ full_name: data.full_name || "", company: data.company || "", title: data.title || "" });
       setLoading(false);
-    });
+    })();
   }, [user]);
 
   async function save() {
     if (!user) return;
     setSaving(true);
+    const supabase = await getBrowserSupabase();
     const { error } = await supabase.from("profiles").update(profile).eq("id", user.id);
     setSaving(false);
     if (error) toast.error(error.message);
