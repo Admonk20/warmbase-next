@@ -1,15 +1,19 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { LayoutDashboard, Users, Send, Workflow, BarChart3, Settings, LogOut, Mail } from "lucide-react";
+import { LayoutDashboard, Users, Send, Workflow, BarChart3, Settings, LogOut, Mail, Search, AtSign, BookOpen } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { AssistantWidget } from "@/components/assistant-widget";
 
 const nav = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { to: "/leads", label: "Leads", icon: Users },
-  { to: "/campaigns", label: "Campaigns", icon: Send },
+  { to: "/lead-finder", label: "Lead Finder", icon: Search },
+  { to: "/email-finder", label: "Email Finder", icon: AtSign },
   { to: "/sequences", label: "Sequences", icon: Workflow },
+  { to: "/campaigns", label: "Campaigns", icon: Send },
   { to: "/deliverability", label: "Deliverability", icon: BarChart3 },
+  { to: "/playbook", label: "Playbook", icon: BookOpen },
   { to: "/settings", label: "Settings", icon: Settings },
 ];
 
@@ -57,6 +61,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </div>
       </aside>
       <main className="flex-1 min-w-0 overflow-auto">{children}</main>
+      <AssistantWidget />
     </div>
   );
 }
