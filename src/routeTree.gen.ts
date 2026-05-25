@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AppRouteImport } from './routes/_app'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AppSourcingRouteImport } from './routes/_app/sourcing'
 import { Route as AppSettingsRouteImport } from './routes/_app/settings'
 import { Route as AppSequencesRouteImport } from './routes/_app/sequences'
 import { Route as AppPipelineRouteImport } from './routes/_app/pipeline'
@@ -37,6 +38,11 @@ const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
+} as any)
+const AppSourcingRoute = AppSourcingRouteImport.update({
+  id: '/sourcing',
+  path: '/sourcing',
+  getParentRoute: () => AppRoute,
 } as any)
 const AppSettingsRoute = AppSettingsRouteImport.update({
   id: '/settings',
@@ -106,6 +112,7 @@ export interface FileRoutesByFullPath {
   '/pipeline': typeof AppPipelineRoute
   '/sequences': typeof AppSequencesRoute
   '/settings': typeof AppSettingsRoute
+  '/sourcing': typeof AppSourcingRoute
   '/api/public/unsubscribe': typeof ApiPublicUnsubscribeRoute
   '/api/public/track/click': typeof ApiPublicTrackClickRoute
   '/api/public/track/open.gif': typeof ApiPublicTrackOpenDotgifRoute
@@ -121,6 +128,7 @@ export interface FileRoutesByTo {
   '/pipeline': typeof AppPipelineRoute
   '/sequences': typeof AppSequencesRoute
   '/settings': typeof AppSettingsRoute
+  '/sourcing': typeof AppSourcingRoute
   '/api/public/unsubscribe': typeof ApiPublicUnsubscribeRoute
   '/api/public/track/click': typeof ApiPublicTrackClickRoute
   '/api/public/track/open.gif': typeof ApiPublicTrackOpenDotgifRoute
@@ -138,6 +146,7 @@ export interface FileRoutesById {
   '/_app/pipeline': typeof AppPipelineRoute
   '/_app/sequences': typeof AppSequencesRoute
   '/_app/settings': typeof AppSettingsRoute
+  '/_app/sourcing': typeof AppSourcingRoute
   '/api/public/unsubscribe': typeof ApiPublicUnsubscribeRoute
   '/api/public/track/click': typeof ApiPublicTrackClickRoute
   '/api/public/track/open.gif': typeof ApiPublicTrackOpenDotgifRoute
@@ -155,6 +164,7 @@ export interface FileRouteTypes {
     | '/pipeline'
     | '/sequences'
     | '/settings'
+    | '/sourcing'
     | '/api/public/unsubscribe'
     | '/api/public/track/click'
     | '/api/public/track/open.gif'
@@ -170,6 +180,7 @@ export interface FileRouteTypes {
     | '/pipeline'
     | '/sequences'
     | '/settings'
+    | '/sourcing'
     | '/api/public/unsubscribe'
     | '/api/public/track/click'
     | '/api/public/track/open.gif'
@@ -186,6 +197,7 @@ export interface FileRouteTypes {
     | '/_app/pipeline'
     | '/_app/sequences'
     | '/_app/settings'
+    | '/_app/sourcing'
     | '/api/public/unsubscribe'
     | '/api/public/track/click'
     | '/api/public/track/open.gif'
@@ -222,6 +234,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/_app/sourcing': {
+      id: '/_app/sourcing'
+      path: '/sourcing'
+      fullPath: '/sourcing'
+      preLoaderRoute: typeof AppSourcingRouteImport
+      parentRoute: typeof AppRoute
     }
     '/_app/settings': {
       id: '/_app/settings'
@@ -312,6 +331,7 @@ interface AppRouteChildren {
   AppPipelineRoute: typeof AppPipelineRoute
   AppSequencesRoute: typeof AppSequencesRoute
   AppSettingsRoute: typeof AppSettingsRoute
+  AppSourcingRoute: typeof AppSourcingRoute
 }
 
 const AppRouteChildren: AppRouteChildren = {
@@ -323,6 +343,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppPipelineRoute: AppPipelineRoute,
   AppSequencesRoute: AppSequencesRoute,
   AppSettingsRoute: AppSettingsRoute,
+  AppSourcingRoute: AppSourcingRoute,
 }
 
 const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
@@ -338,3 +359,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
