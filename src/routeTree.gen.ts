@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AppRouteImport } from './routes/_app'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AppTasksRouteImport } from './routes/_app/tasks'
 import { Route as AppSourcingRouteImport } from './routes/_app/sourcing'
 import { Route as AppSettingsRouteImport } from './routes/_app/settings'
 import { Route as AppSequencesRouteImport } from './routes/_app/sequences'
@@ -40,6 +41,11 @@ const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
+} as any)
+const AppTasksRoute = AppTasksRouteImport.update({
+  id: '/tasks',
+  path: '/tasks',
+  getParentRoute: () => AppRoute,
 } as any)
 const AppSourcingRoute = AppSourcingRouteImport.update({
   id: '/sourcing',
@@ -126,6 +132,7 @@ export interface FileRoutesByFullPath {
   '/sequences': typeof AppSequencesRoute
   '/settings': typeof AppSettingsRoute
   '/sourcing': typeof AppSourcingRoute
+  '/tasks': typeof AppTasksRoute
   '/api/public/unsubscribe': typeof ApiPublicUnsubscribeRoute
   '/api/public/cron/imap-poll': typeof ApiPublicCronImapPollRoute
   '/api/public/hooks/email-events': typeof ApiPublicHooksEmailEventsRoute
@@ -144,6 +151,7 @@ export interface FileRoutesByTo {
   '/sequences': typeof AppSequencesRoute
   '/settings': typeof AppSettingsRoute
   '/sourcing': typeof AppSourcingRoute
+  '/tasks': typeof AppTasksRoute
   '/api/public/unsubscribe': typeof ApiPublicUnsubscribeRoute
   '/api/public/cron/imap-poll': typeof ApiPublicCronImapPollRoute
   '/api/public/hooks/email-events': typeof ApiPublicHooksEmailEventsRoute
@@ -164,6 +172,7 @@ export interface FileRoutesById {
   '/_app/sequences': typeof AppSequencesRoute
   '/_app/settings': typeof AppSettingsRoute
   '/_app/sourcing': typeof AppSourcingRoute
+  '/_app/tasks': typeof AppTasksRoute
   '/api/public/unsubscribe': typeof ApiPublicUnsubscribeRoute
   '/api/public/cron/imap-poll': typeof ApiPublicCronImapPollRoute
   '/api/public/hooks/email-events': typeof ApiPublicHooksEmailEventsRoute
@@ -184,6 +193,7 @@ export interface FileRouteTypes {
     | '/sequences'
     | '/settings'
     | '/sourcing'
+    | '/tasks'
     | '/api/public/unsubscribe'
     | '/api/public/cron/imap-poll'
     | '/api/public/hooks/email-events'
@@ -202,6 +212,7 @@ export interface FileRouteTypes {
     | '/sequences'
     | '/settings'
     | '/sourcing'
+    | '/tasks'
     | '/api/public/unsubscribe'
     | '/api/public/cron/imap-poll'
     | '/api/public/hooks/email-events'
@@ -221,6 +232,7 @@ export interface FileRouteTypes {
     | '/_app/sequences'
     | '/_app/settings'
     | '/_app/sourcing'
+    | '/_app/tasks'
     | '/api/public/unsubscribe'
     | '/api/public/cron/imap-poll'
     | '/api/public/hooks/email-events'
@@ -261,6 +273,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/_app/tasks': {
+      id: '/_app/tasks'
+      path: '/tasks'
+      fullPath: '/tasks'
+      preLoaderRoute: typeof AppTasksRouteImport
+      parentRoute: typeof AppRoute
     }
     '/_app/sourcing': {
       id: '/_app/sourcing'
@@ -373,6 +392,7 @@ interface AppRouteChildren {
   AppSequencesRoute: typeof AppSequencesRoute
   AppSettingsRoute: typeof AppSettingsRoute
   AppSourcingRoute: typeof AppSourcingRoute
+  AppTasksRoute: typeof AppTasksRoute
 }
 
 const AppRouteChildren: AppRouteChildren = {
@@ -385,6 +405,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppSequencesRoute: AppSequencesRoute,
   AppSettingsRoute: AppSettingsRoute,
   AppSourcingRoute: AppSourcingRoute,
+  AppTasksRoute: AppTasksRoute,
 }
 
 const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
@@ -402,3 +423,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
