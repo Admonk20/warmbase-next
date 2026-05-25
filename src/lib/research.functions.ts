@@ -180,9 +180,5 @@ export const cleanLeads = createServerFn({ method: "POST" })
       json: true,
       temperature: 0.2,
     });
-    try {
-      return JSON.parse(out);
-    } catch {
-      return { leads: data.leads, removed: 0, notes: "Could not parse AI response" };
-    }
+    return { result: out };
   });
