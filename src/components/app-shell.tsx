@@ -1,5 +1,5 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { LayoutDashboard, Users, Send, Workflow, BarChart3, Settings, LogOut, Mail, Sparkles, KanbanSquare, FileBarChart } from "lucide-react";
+import { LayoutDashboard, Users, Send, Workflow, BarChart3, Settings, LogOut, Mail, Sparkles, KanbanSquare, FileBarChart, CheckSquare } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -10,12 +10,14 @@ const nav = [
   { to: "/sourcing", label: "Sourcing", icon: Sparkles },
   { to: "/leads", label: "Leads", icon: Users },
   { to: "/pipeline", label: "Pipeline", icon: KanbanSquare },
+  { to: "/tasks", label: "Tasks", icon: CheckSquare },
   { to: "/sequences", label: "Sequences", icon: Workflow },
   { to: "/campaigns", label: "Campaigns", icon: Send },
   { to: "/deliverability", label: "Deliverability", icon: BarChart3 },
   { to: "/reports", label: "Reports", icon: FileBarChart },
   { to: "/settings", label: "Settings", icon: Settings },
 ];
+
 
 
 export function AppShell({ children }: { children: React.ReactNode }) {

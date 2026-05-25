@@ -244,24 +244,26 @@ export const sendEmail = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const to = data.to.toLowerCase();
 
-    // 1. Suppression check
-    const { data: suppressed } = await context.supabase
-      .from("unsubscribes")
-      .select("id")
-      .eq("user_id", context.userId)
-      .eq("email", to)
-      .maybeSingle();
-    if (suppressed) {
+    // 1. Suppression check (unsubscribes + global suppressions list)
+    const [{ data: unsub }, { data: suppressed }] = await Promise.all([
+      context.supabase.from("unsubscribes")
+        .select("id").eq("user_id", context.userId).eq("email", to).maybeSingle(),
+      context.supabase.from("suppressions")
+        .select("id, reason").eq("user_id", context.userId).eq("email", to).maybeSingle(),
+    ]);
+    if (unsub || suppressed) {
+      const reason = unsub ? "unsubscribed" : (suppressed?.reason ?? "suppressed");
       await context.supabase.from("email_events").insert({
         user_id: context.userId,
         lead_id: data.leadId ?? null,
         campaign_id: data.campaignId ?? null,
         event_type: "failed",
         subject: data.subject,
-        metadata: { to, reason: "suppressed" },
+        metadata: { to, reason },
       });
-      throw new Error(`${to} has unsubscribed and is on the suppression list.`);
+      throw new Error(`${to} is on the suppression list (${reason}).`);
     }
+
 
     // 2. Provider: prefer per-user SMTP, fall back to Resend.
     const { data: smtpRow } = await context.supabase

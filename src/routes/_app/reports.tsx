@@ -6,7 +6,9 @@ import { PageHeader } from "@/components/page-header";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { weeklyDigest, exportLeadsCsv, exportActivityCsv } from "@/lib/export.functions";
+import { funnel, cohorts } from "@/lib/analytics.functions";
 import { toast } from "sonner";
+
 
 export const Route = createFileRoute("/_app/reports")({ component: Reports });
 
@@ -22,11 +24,22 @@ function Reports() {
   const digestFn = useServerFn(weeklyDigest);
   const leadsFn = useServerFn(exportLeadsCsv);
   const activityFn = useServerFn(exportActivityCsv);
+  const funnelFn = useServerFn(funnel);
+  const cohortsFn = useServerFn(cohorts);
 
   const { data, isLoading } = useQuery({
     queryKey: ["weekly-digest"],
     queryFn: () => digestFn(),
   });
+  const { data: fn } = useQuery({
+    queryKey: ["funnel", 30],
+    queryFn: () => funnelFn({ data: { days: 30 } }),
+  });
+  const { data: co } = useQuery({
+    queryKey: ["cohorts", 8],
+    queryFn: () => cohortsFn({ data: { weeks: 8 } }),
+  });
+
 
   async function exportLeads() {
     try {
@@ -100,6 +113,79 @@ function Reports() {
           )}
         </CardContent>
       </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Funnel — last 30 days</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {!fn ? (
+            <div className="text-sm text-muted-foreground">Loading…</div>
+          ) : (
+            <div className="space-y-2">
+              {([
+                ["Sent", fn.sent],
+                ["Opened", fn.opened],
+                ["Replied", fn.replied],
+                ["Meeting", fn.meeting],
+                ["Won", fn.won],
+              ] as const).map(([label, n]) => {
+                const pct = fn.sent ? Math.round((Number(n) / fn.sent) * 100) : 0;
+                return (
+                  <div key={label}>
+                    <div className="flex justify-between text-xs mb-1"><span>{label}</span><span className="text-muted-foreground">{n} · {pct}%</span></div>
+                    <div className="h-2 rounded bg-muted overflow-hidden">
+                      <div className="h-full bg-primary" style={{ width: `${pct}%` }} />
+                    </div>
+                  </div>
+                );
+              })}
+              <div className="text-xs text-muted-foreground pt-2">Won value: ${fn.won_value.toLocaleString()}</div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Weekly cohorts</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {!co ? (
+            <div className="text-sm text-muted-foreground">Loading…</div>
+          ) : co.cohorts.length === 0 ? (
+            <div className="text-sm text-muted-foreground">No data yet.</div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="text-left text-xs text-muted-foreground">
+                    <th className="py-2 pr-3">Week</th>
+                    <th className="py-2 pr-3">Leads</th>
+                    <th className="py-2 pr-3">Sent</th>
+                    <th className="py-2 pr-3">Replied</th>
+                    <th className="py-2 pr-3">Won</th>
+                    <th className="py-2 pr-3">Value</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {co.cohorts.map((c) => (
+                    <tr key={c.week} className="border-t">
+                      <td className="py-2 pr-3 font-medium">{c.week}</td>
+                      <td className="py-2 pr-3">{c.leads}</td>
+                      <td className="py-2 pr-3">{c.sent}</td>
+                      <td className="py-2 pr-3">{c.replied}</td>
+                      <td className="py-2 pr-3">{c.won}</td>
+                      <td className="py-2 pr-3">${c.value.toLocaleString()}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
 
       <Card>
         <CardHeader>
