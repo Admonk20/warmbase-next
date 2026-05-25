@@ -2,6 +2,13 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { chatCompletion, getUserOpenAIKey, getUserKey } from "./ai.server";
+import {
+  getAppBaseUrl,
+  htmlFromText,
+  newMessageId,
+  newUnsubToken,
+  wrapBody,
+} from "./email-tracking.server";
 
 const STAGE_CONTEXT: Record<string, { goal: string; tone: string; cta: string }> = {
   new: {
@@ -235,46 +242,98 @@ export const sendEmail = createServerFn({ method: "POST" })
     }).parse,
   )
   .handler(async ({ data, context }) => {
+    const to = data.to.toLowerCase();
+
+    // 1. Suppression check
+    const { data: suppressed } = await context.supabase
+      .from("unsubscribes")
+      .select("id")
+      .eq("user_id", context.userId)
+      .eq("email", to)
+      .maybeSingle();
+    if (suppressed) {
+      await context.supabase.from("email_events").insert({
+        user_id: context.userId,
+        lead_id: data.leadId ?? null,
+        campaign_id: data.campaignId ?? null,
+        event_type: "failed",
+        subject: data.subject,
+        metadata: { to, reason: "suppressed" },
+      });
+      throw new Error(`${to} has unsubscribed and is on the suppression list.`);
+    }
+
+    // 2. Provider check (Resend for now; Lovable Emails infra is recommended once domain is set up)
     const resendKey = await getUserKey(context.supabase, context.userId, "resend");
     if (!resendKey) {
       throw new Error(
-        "No Resend API key configured. Add one in Settings → API Keys (Resend is recommended on edge runtime; SMTP via nodemailer is not supported on Cloudflare Workers).",
+        "No email sender configured. Add a Resend API key in Settings → API Keys, or enable Lovable Emails by setting up your sender domain.",
       );
     }
+
+    // 3. Build tracked body
+    const messageId = newMessageId();
+    const unsubToken = newUnsubToken(context.userId, to);
+    await context.supabase
+      .from("email_unsub_tokens")
+      .insert({ token: unsubToken, user_id: context.userId, email: to });
+
+    const baseUrl = getAppBaseUrl();
+    const htmlBase = htmlFromText(data.body);
+    const html = wrapBody({
+      body: htmlBase,
+      isHtml: true,
+      baseUrl,
+      messageId,
+      unsubToken,
+    });
+    const text = wrapBody({
+      body: data.body,
+      isHtml: false,
+      baseUrl,
+      messageId,
+      unsubToken,
+    });
+
     const fromEmail = data.fromEmail ?? "onboarding@resend.dev";
     const fromName = data.fromName ?? "ColdBase Pro";
 
     const res = await fetch("https://api.resend.com/emails", {
       method: "POST",
-      headers: {
-        Authorization: `Bearer ${resendKey}`,
-        "Content-Type": "application/json",
-      },
+      headers: { Authorization: `Bearer ${resendKey}`, "Content-Type": "application/json" },
       body: JSON.stringify({
         from: `${fromName} <${fromEmail}>`,
-        to: [data.to],
+        to: [to],
         subject: data.subject,
-        text: data.body,
+        html,
+        text,
+        headers: { "List-Unsubscribe": `<${baseUrl}/api/public/unsubscribe?t=${unsubToken}>` },
       }),
     });
     if (!res.ok) {
       const t = await res.text().catch(() => "");
-      throw new Error(`Resend error (${res.status}): ${t.slice(0, 200)}`);
+      await context.supabase.from("email_events").insert({
+        user_id: context.userId,
+        lead_id: data.leadId ?? null,
+        campaign_id: data.campaignId ?? null,
+        event_type: "failed",
+        subject: data.subject,
+        metadata: { to, message_id: messageId, error: t.slice(0, 200), status: res.status },
+      });
+      throw new Error(`Email send failed (${res.status}): ${t.slice(0, 200)}`);
     }
-    const out = await res.json();
+    const out = (await res.json()) as { id?: string };
 
-    // Log the send event
     await context.supabase.from("email_events").insert({
       user_id: context.userId,
       lead_id: data.leadId ?? null,
       campaign_id: data.campaignId ?? null,
       event_type: "sent",
       subject: data.subject,
-      metadata: { to: data.to, provider: "resend", provider_id: (out as any)?.id ?? null },
+      metadata: { to, message_id: messageId, provider: "resend", provider_id: out?.id ?? null },
     });
 
     if (data.campaignId) {
-      // increment sent_count atomically-ish (best effort)
       const { data: camp } = await context.supabase
         .from("campaigns").select("sent_count").eq("id", data.campaignId).maybeSingle();
       if (camp) {
@@ -291,5 +350,6 @@ export const sendEmail = createServerFn({ method: "POST" })
         .eq("id", data.leadId);
     }
 
-    return { ok: true, id: (out as any)?.id ?? null };
+    return { ok: true, id: out?.id ?? null, messageId };
   });
+

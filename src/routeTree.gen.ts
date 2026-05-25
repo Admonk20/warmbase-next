@@ -14,13 +14,15 @@ import { Route as AppRouteImport } from './routes/_app'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AppSettingsRouteImport } from './routes/_app/settings'
 import { Route as AppSequencesRouteImport } from './routes/_app/sequences'
-import { Route as AppPlaybookRouteImport } from './routes/_app/playbook'
+import { Route as AppPipelineRouteImport } from './routes/_app/pipeline'
 import { Route as AppLeadsRouteImport } from './routes/_app/leads'
 import { Route as AppLeadFinderRouteImport } from './routes/_app/lead-finder'
-import { Route as AppEmailFinderRouteImport } from './routes/_app/email-finder'
 import { Route as AppDeliverabilityRouteImport } from './routes/_app/deliverability'
 import { Route as AppDashboardRouteImport } from './routes/_app/dashboard'
 import { Route as AppCampaignsRouteImport } from './routes/_app/campaigns'
+import { Route as ApiPublicUnsubscribeRouteImport } from './routes/api/public/unsubscribe'
+import { Route as ApiPublicTrackOpenDotgifRouteImport } from './routes/api/public/track/open[.]gif'
+import { Route as ApiPublicTrackClickRouteImport } from './routes/api/public/track/click'
 
 const AuthRoute = AuthRouteImport.update({
   id: '/auth',
@@ -46,9 +48,9 @@ const AppSequencesRoute = AppSequencesRouteImport.update({
   path: '/sequences',
   getParentRoute: () => AppRoute,
 } as any)
-const AppPlaybookRoute = AppPlaybookRouteImport.update({
-  id: '/playbook',
-  path: '/playbook',
+const AppPipelineRoute = AppPipelineRouteImport.update({
+  id: '/pipeline',
+  path: '/pipeline',
   getParentRoute: () => AppRoute,
 } as any)
 const AppLeadsRoute = AppLeadsRouteImport.update({
@@ -59,11 +61,6 @@ const AppLeadsRoute = AppLeadsRouteImport.update({
 const AppLeadFinderRoute = AppLeadFinderRouteImport.update({
   id: '/lead-finder',
   path: '/lead-finder',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppEmailFinderRoute = AppEmailFinderRouteImport.update({
-  id: '/email-finder',
-  path: '/email-finder',
   getParentRoute: () => AppRoute,
 } as any)
 const AppDeliverabilityRoute = AppDeliverabilityRouteImport.update({
@@ -81,6 +78,22 @@ const AppCampaignsRoute = AppCampaignsRouteImport.update({
   path: '/campaigns',
   getParentRoute: () => AppRoute,
 } as any)
+const ApiPublicUnsubscribeRoute = ApiPublicUnsubscribeRouteImport.update({
+  id: '/api/public/unsubscribe',
+  path: '/api/public/unsubscribe',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPublicTrackOpenDotgifRoute =
+  ApiPublicTrackOpenDotgifRouteImport.update({
+    id: '/api/public/track/open.gif',
+    path: '/api/public/track/open.gif',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiPublicTrackClickRoute = ApiPublicTrackClickRouteImport.update({
+  id: '/api/public/track/click',
+  path: '/api/public/track/click',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -88,12 +101,14 @@ export interface FileRoutesByFullPath {
   '/campaigns': typeof AppCampaignsRoute
   '/dashboard': typeof AppDashboardRoute
   '/deliverability': typeof AppDeliverabilityRoute
-  '/email-finder': typeof AppEmailFinderRoute
   '/lead-finder': typeof AppLeadFinderRoute
   '/leads': typeof AppLeadsRoute
-  '/playbook': typeof AppPlaybookRoute
+  '/pipeline': typeof AppPipelineRoute
   '/sequences': typeof AppSequencesRoute
   '/settings': typeof AppSettingsRoute
+  '/api/public/unsubscribe': typeof ApiPublicUnsubscribeRoute
+  '/api/public/track/click': typeof ApiPublicTrackClickRoute
+  '/api/public/track/open.gif': typeof ApiPublicTrackOpenDotgifRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -101,12 +116,14 @@ export interface FileRoutesByTo {
   '/campaigns': typeof AppCampaignsRoute
   '/dashboard': typeof AppDashboardRoute
   '/deliverability': typeof AppDeliverabilityRoute
-  '/email-finder': typeof AppEmailFinderRoute
   '/lead-finder': typeof AppLeadFinderRoute
   '/leads': typeof AppLeadsRoute
-  '/playbook': typeof AppPlaybookRoute
+  '/pipeline': typeof AppPipelineRoute
   '/sequences': typeof AppSequencesRoute
   '/settings': typeof AppSettingsRoute
+  '/api/public/unsubscribe': typeof ApiPublicUnsubscribeRoute
+  '/api/public/track/click': typeof ApiPublicTrackClickRoute
+  '/api/public/track/open.gif': typeof ApiPublicTrackOpenDotgifRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -116,12 +133,14 @@ export interface FileRoutesById {
   '/_app/campaigns': typeof AppCampaignsRoute
   '/_app/dashboard': typeof AppDashboardRoute
   '/_app/deliverability': typeof AppDeliverabilityRoute
-  '/_app/email-finder': typeof AppEmailFinderRoute
   '/_app/lead-finder': typeof AppLeadFinderRoute
   '/_app/leads': typeof AppLeadsRoute
-  '/_app/playbook': typeof AppPlaybookRoute
+  '/_app/pipeline': typeof AppPipelineRoute
   '/_app/sequences': typeof AppSequencesRoute
   '/_app/settings': typeof AppSettingsRoute
+  '/api/public/unsubscribe': typeof ApiPublicUnsubscribeRoute
+  '/api/public/track/click': typeof ApiPublicTrackClickRoute
+  '/api/public/track/open.gif': typeof ApiPublicTrackOpenDotgifRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -131,12 +150,14 @@ export interface FileRouteTypes {
     | '/campaigns'
     | '/dashboard'
     | '/deliverability'
-    | '/email-finder'
     | '/lead-finder'
     | '/leads'
-    | '/playbook'
+    | '/pipeline'
     | '/sequences'
     | '/settings'
+    | '/api/public/unsubscribe'
+    | '/api/public/track/click'
+    | '/api/public/track/open.gif'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -144,12 +165,14 @@ export interface FileRouteTypes {
     | '/campaigns'
     | '/dashboard'
     | '/deliverability'
-    | '/email-finder'
     | '/lead-finder'
     | '/leads'
-    | '/playbook'
+    | '/pipeline'
     | '/sequences'
     | '/settings'
+    | '/api/public/unsubscribe'
+    | '/api/public/track/click'
+    | '/api/public/track/open.gif'
   id:
     | '__root__'
     | '/'
@@ -158,18 +181,23 @@ export interface FileRouteTypes {
     | '/_app/campaigns'
     | '/_app/dashboard'
     | '/_app/deliverability'
-    | '/_app/email-finder'
     | '/_app/lead-finder'
     | '/_app/leads'
-    | '/_app/playbook'
+    | '/_app/pipeline'
     | '/_app/sequences'
     | '/_app/settings'
+    | '/api/public/unsubscribe'
+    | '/api/public/track/click'
+    | '/api/public/track/open.gif'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AppRoute: typeof AppRouteWithChildren
   AuthRoute: typeof AuthRoute
+  ApiPublicUnsubscribeRoute: typeof ApiPublicUnsubscribeRoute
+  ApiPublicTrackClickRoute: typeof ApiPublicTrackClickRoute
+  ApiPublicTrackOpenDotgifRoute: typeof ApiPublicTrackOpenDotgifRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -209,11 +237,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppSequencesRouteImport
       parentRoute: typeof AppRoute
     }
-    '/_app/playbook': {
-      id: '/_app/playbook'
-      path: '/playbook'
-      fullPath: '/playbook'
-      preLoaderRoute: typeof AppPlaybookRouteImport
+    '/_app/pipeline': {
+      id: '/_app/pipeline'
+      path: '/pipeline'
+      fullPath: '/pipeline'
+      preLoaderRoute: typeof AppPipelineRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/leads': {
@@ -228,13 +256,6 @@ declare module '@tanstack/react-router' {
       path: '/lead-finder'
       fullPath: '/lead-finder'
       preLoaderRoute: typeof AppLeadFinderRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/_app/email-finder': {
-      id: '/_app/email-finder'
-      path: '/email-finder'
-      fullPath: '/email-finder'
-      preLoaderRoute: typeof AppEmailFinderRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/deliverability': {
@@ -258,6 +279,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppCampaignsRouteImport
       parentRoute: typeof AppRoute
     }
+    '/api/public/unsubscribe': {
+      id: '/api/public/unsubscribe'
+      path: '/api/public/unsubscribe'
+      fullPath: '/api/public/unsubscribe'
+      preLoaderRoute: typeof ApiPublicUnsubscribeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/track/open.gif': {
+      id: '/api/public/track/open.gif'
+      path: '/api/public/track/open.gif'
+      fullPath: '/api/public/track/open.gif'
+      preLoaderRoute: typeof ApiPublicTrackOpenDotgifRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/track/click': {
+      id: '/api/public/track/click'
+      path: '/api/public/track/click'
+      fullPath: '/api/public/track/click'
+      preLoaderRoute: typeof ApiPublicTrackClickRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -265,10 +307,9 @@ interface AppRouteChildren {
   AppCampaignsRoute: typeof AppCampaignsRoute
   AppDashboardRoute: typeof AppDashboardRoute
   AppDeliverabilityRoute: typeof AppDeliverabilityRoute
-  AppEmailFinderRoute: typeof AppEmailFinderRoute
   AppLeadFinderRoute: typeof AppLeadFinderRoute
   AppLeadsRoute: typeof AppLeadsRoute
-  AppPlaybookRoute: typeof AppPlaybookRoute
+  AppPipelineRoute: typeof AppPipelineRoute
   AppSequencesRoute: typeof AppSequencesRoute
   AppSettingsRoute: typeof AppSettingsRoute
 }
@@ -277,10 +318,9 @@ const AppRouteChildren: AppRouteChildren = {
   AppCampaignsRoute: AppCampaignsRoute,
   AppDashboardRoute: AppDashboardRoute,
   AppDeliverabilityRoute: AppDeliverabilityRoute,
-  AppEmailFinderRoute: AppEmailFinderRoute,
   AppLeadFinderRoute: AppLeadFinderRoute,
   AppLeadsRoute: AppLeadsRoute,
-  AppPlaybookRoute: AppPlaybookRoute,
+  AppPipelineRoute: AppPipelineRoute,
   AppSequencesRoute: AppSequencesRoute,
   AppSettingsRoute: AppSettingsRoute,
 }
@@ -291,6 +331,9 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AppRoute: AppRouteWithChildren,
   AuthRoute: AuthRoute,
+  ApiPublicUnsubscribeRoute: ApiPublicUnsubscribeRoute,
+  ApiPublicTrackClickRoute: ApiPublicTrackClickRoute,
+  ApiPublicTrackOpenDotgifRoute: ApiPublicTrackOpenDotgifRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
