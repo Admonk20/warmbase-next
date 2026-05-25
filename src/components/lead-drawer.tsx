@@ -198,9 +198,6 @@ export function LeadDrawer({ lead, open, onClose }: { lead: any | null; open: bo
             </div>
           </TabsContent>
 
-          <TabsContent value="draft" className="pt-4">
-            <LeadDrafter lead={lead} open={true} embedded onClose={() => {}} />
-          </TabsContent>
         </Tabs>
       </SheetContent>
     </Sheet>
