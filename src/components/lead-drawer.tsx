@@ -12,7 +12,7 @@ import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@
 import { Loader2, Save, Mail, Send, MousePointerClick, Reply, AlertCircle, Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { listLeadNotes, addLeadNote, deleteLeadNote, leadActivity } from "@/lib/notes.functions";
-import { LeadDrafter } from "@/components/lead-drafter";
+
 import { toast } from "sonner";
 import { formatDistanceToNow } from "date-fns";
 
