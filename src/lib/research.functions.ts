@@ -33,8 +33,15 @@ export const researchLead = createServerFn({ method: "POST" })
       json: true,
       temperature: 0.5,
     });
+    type ResearchResult = { summary: string; suggested_service: string; score: number; hook: string };
     try {
-      return JSON.parse(out);
+      const parsed = JSON.parse(out) as Partial<ResearchResult>;
+      return {
+        summary: String(parsed.summary ?? ""),
+        suggested_service: String(parsed.suggested_service ?? ""),
+        score: Number(parsed.score ?? 5),
+        hook: String(parsed.hook ?? ""),
+      } satisfies ResearchResult;
     } catch {
       return { summary: out, suggested_service: "", score: 5, hook: "" };
     }
@@ -152,7 +159,7 @@ export const hunterSearch = createServerFn({ method: "POST" })
         url = `${BASE}/email-verifier?email=${encodeURIComponent(data.email ?? "")}&api_key=${key}`; break;
     }
     const res = await fetch(url);
-    return await res.json();
+    return (await res.json()) as Record<string, unknown> as { [k: string]: unknown };
   });
 
 export const cleanLeads = createServerFn({ method: "POST" })
