@@ -5,10 +5,13 @@ import { useServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { Plus, Trash2, Loader2, Pencil, Mail, Download, Upload, Sparkles, Search } from "lucide-react";
 import { getBrowserSupabase } from "@/integrations/supabase/browser-client";
+
 import { useAuth } from "@/hooks/use-auth";
 import { personalizeBatch } from "@/lib/email.functions";
 import { PageHeader } from "@/components/page-header";
 import { LeadDrafter } from "@/components/lead-drafter";
+import { LeadDrawer } from "@/components/lead-drawer";
+import { CsvImporter } from "@/components/csv-importer";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -23,6 +26,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_app/leads")({ component: Leads });
+
 
 const STATUSES = ["new", "contacted", "engaged", "meeting", "won", "lost"] as const;
 type Status = typeof STATUSES[number];
@@ -73,6 +77,9 @@ function Leads() {
   const [q, setQ] = useState("");
   const [selected, setSelected] = useState<Record<string, boolean>>({});
   const [drafterLead, setDrafterLead] = useState<any | null>(null);
+  const [drawerLead, setDrawerLead] = useState<any | null>(null);
+  const [csvOpen, setCsvOpen] = useState(false);
+
 
   const { data: leads = [], isLoading } = useQuery({
     queryKey: ["leads"],
@@ -232,8 +239,8 @@ function Leads() {
         description="Manage every prospect in your pipeline."
         actions={
           <div className="flex flex-wrap gap-2">
-            <input type="file" accept=".csv" id="csv-upload" className="hidden" onChange={(e) => e.target.files?.[0] && importCsv(e.target.files[0])} />
-            <Button variant="outline" size="sm" onClick={() => document.getElementById("csv-upload")?.click()}><Upload className="size-4" /> Import CSV</Button>
+            <Button variant="outline" size="sm" onClick={() => setCsvOpen(true)}><Upload className="size-4" /> Import CSV</Button>
+
             <Button variant="outline" size="sm" onClick={exportCsv} disabled={!filtered.length}><Download className="size-4" /> Export</Button>
             <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) { setEditing(null); setForm(empty); } }}>
               <DialogTrigger asChild>
@@ -345,7 +352,7 @@ function Leads() {
                   </TableCell>
                   <TableCell className="text-right">
                     <Button variant="ghost" size="icon" onClick={() => setDrafterLead(l)} aria-label="Draft email"><Mail className="size-4" /></Button>
-                    <Button variant="ghost" size="icon" onClick={() => openEdit(l)} aria-label="Edit"><Pencil className="size-4" /></Button>
+                    <Button variant="ghost" size="icon" onClick={() => setDrawerLead(l)} aria-label="Open"><Pencil className="size-4" /></Button>
                     <Button variant="ghost" size="icon" onClick={() => remove.mutate([l.id])} aria-label="Delete"><Trash2 className="size-4" /></Button>
                   </TableCell>
                 </TableRow>
@@ -356,6 +363,9 @@ function Leads() {
       </Card>
 
       <LeadDrafter lead={drafterLead} open={!!drafterLead} onClose={() => setDrafterLead(null)} />
+      <LeadDrawer lead={drawerLead} open={!!drawerLead} onClose={() => setDrawerLead(null)} />
+      <CsvImporter open={csvOpen} onOpenChange={setCsvOpen} onDone={() => { qc.invalidateQueries({ queryKey: ["leads"] }); qc.invalidateQueries({ queryKey: ["leads-count"] }); }} />
+
     </div>
   );
 }

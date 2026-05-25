@@ -12,11 +12,11 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AppRouteImport } from './routes/_app'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AppSourcingRouteImport } from './routes/_app/sourcing'
 import { Route as AppSettingsRouteImport } from './routes/_app/settings'
 import { Route as AppSequencesRouteImport } from './routes/_app/sequences'
 import { Route as AppPipelineRouteImport } from './routes/_app/pipeline'
 import { Route as AppLeadsRouteImport } from './routes/_app/leads'
-import { Route as AppLeadFinderRouteImport } from './routes/_app/lead-finder'
 import { Route as AppDeliverabilityRouteImport } from './routes/_app/deliverability'
 import { Route as AppDashboardRouteImport } from './routes/_app/dashboard'
 import { Route as AppCampaignsRouteImport } from './routes/_app/campaigns'
@@ -38,6 +38,11 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AppSourcingRoute = AppSourcingRouteImport.update({
+  id: '/sourcing',
+  path: '/sourcing',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppSettingsRoute = AppSettingsRouteImport.update({
   id: '/settings',
   path: '/settings',
@@ -56,11 +61,6 @@ const AppPipelineRoute = AppPipelineRouteImport.update({
 const AppLeadsRoute = AppLeadsRouteImport.update({
   id: '/leads',
   path: '/leads',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppLeadFinderRoute = AppLeadFinderRouteImport.update({
-  id: '/lead-finder',
-  path: '/lead-finder',
   getParentRoute: () => AppRoute,
 } as any)
 const AppDeliverabilityRoute = AppDeliverabilityRouteImport.update({
@@ -101,11 +101,11 @@ export interface FileRoutesByFullPath {
   '/campaigns': typeof AppCampaignsRoute
   '/dashboard': typeof AppDashboardRoute
   '/deliverability': typeof AppDeliverabilityRoute
-  '/lead-finder': typeof AppLeadFinderRoute
   '/leads': typeof AppLeadsRoute
   '/pipeline': typeof AppPipelineRoute
   '/sequences': typeof AppSequencesRoute
   '/settings': typeof AppSettingsRoute
+  '/sourcing': typeof AppSourcingRoute
   '/api/public/unsubscribe': typeof ApiPublicUnsubscribeRoute
   '/api/public/track/click': typeof ApiPublicTrackClickRoute
   '/api/public/track/open.gif': typeof ApiPublicTrackOpenDotgifRoute
@@ -116,11 +116,11 @@ export interface FileRoutesByTo {
   '/campaigns': typeof AppCampaignsRoute
   '/dashboard': typeof AppDashboardRoute
   '/deliverability': typeof AppDeliverabilityRoute
-  '/lead-finder': typeof AppLeadFinderRoute
   '/leads': typeof AppLeadsRoute
   '/pipeline': typeof AppPipelineRoute
   '/sequences': typeof AppSequencesRoute
   '/settings': typeof AppSettingsRoute
+  '/sourcing': typeof AppSourcingRoute
   '/api/public/unsubscribe': typeof ApiPublicUnsubscribeRoute
   '/api/public/track/click': typeof ApiPublicTrackClickRoute
   '/api/public/track/open.gif': typeof ApiPublicTrackOpenDotgifRoute
@@ -133,11 +133,11 @@ export interface FileRoutesById {
   '/_app/campaigns': typeof AppCampaignsRoute
   '/_app/dashboard': typeof AppDashboardRoute
   '/_app/deliverability': typeof AppDeliverabilityRoute
-  '/_app/lead-finder': typeof AppLeadFinderRoute
   '/_app/leads': typeof AppLeadsRoute
   '/_app/pipeline': typeof AppPipelineRoute
   '/_app/sequences': typeof AppSequencesRoute
   '/_app/settings': typeof AppSettingsRoute
+  '/_app/sourcing': typeof AppSourcingRoute
   '/api/public/unsubscribe': typeof ApiPublicUnsubscribeRoute
   '/api/public/track/click': typeof ApiPublicTrackClickRoute
   '/api/public/track/open.gif': typeof ApiPublicTrackOpenDotgifRoute
@@ -150,11 +150,11 @@ export interface FileRouteTypes {
     | '/campaigns'
     | '/dashboard'
     | '/deliverability'
-    | '/lead-finder'
     | '/leads'
     | '/pipeline'
     | '/sequences'
     | '/settings'
+    | '/sourcing'
     | '/api/public/unsubscribe'
     | '/api/public/track/click'
     | '/api/public/track/open.gif'
@@ -165,11 +165,11 @@ export interface FileRouteTypes {
     | '/campaigns'
     | '/dashboard'
     | '/deliverability'
-    | '/lead-finder'
     | '/leads'
     | '/pipeline'
     | '/sequences'
     | '/settings'
+    | '/sourcing'
     | '/api/public/unsubscribe'
     | '/api/public/track/click'
     | '/api/public/track/open.gif'
@@ -181,11 +181,11 @@ export interface FileRouteTypes {
     | '/_app/campaigns'
     | '/_app/dashboard'
     | '/_app/deliverability'
-    | '/_app/lead-finder'
     | '/_app/leads'
     | '/_app/pipeline'
     | '/_app/sequences'
     | '/_app/settings'
+    | '/_app/sourcing'
     | '/api/public/unsubscribe'
     | '/api/public/track/click'
     | '/api/public/track/open.gif'
@@ -223,6 +223,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_app/sourcing': {
+      id: '/_app/sourcing'
+      path: '/sourcing'
+      fullPath: '/sourcing'
+      preLoaderRoute: typeof AppSourcingRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/settings': {
       id: '/_app/settings'
       path: '/settings'
@@ -249,13 +256,6 @@ declare module '@tanstack/react-router' {
       path: '/leads'
       fullPath: '/leads'
       preLoaderRoute: typeof AppLeadsRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/_app/lead-finder': {
-      id: '/_app/lead-finder'
-      path: '/lead-finder'
-      fullPath: '/lead-finder'
-      preLoaderRoute: typeof AppLeadFinderRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/deliverability': {
@@ -307,22 +307,22 @@ interface AppRouteChildren {
   AppCampaignsRoute: typeof AppCampaignsRoute
   AppDashboardRoute: typeof AppDashboardRoute
   AppDeliverabilityRoute: typeof AppDeliverabilityRoute
-  AppLeadFinderRoute: typeof AppLeadFinderRoute
   AppLeadsRoute: typeof AppLeadsRoute
   AppPipelineRoute: typeof AppPipelineRoute
   AppSequencesRoute: typeof AppSequencesRoute
   AppSettingsRoute: typeof AppSettingsRoute
+  AppSourcingRoute: typeof AppSourcingRoute
 }
 
 const AppRouteChildren: AppRouteChildren = {
   AppCampaignsRoute: AppCampaignsRoute,
   AppDashboardRoute: AppDashboardRoute,
   AppDeliverabilityRoute: AppDeliverabilityRoute,
-  AppLeadFinderRoute: AppLeadFinderRoute,
   AppLeadsRoute: AppLeadsRoute,
   AppPipelineRoute: AppPipelineRoute,
   AppSequencesRoute: AppSequencesRoute,
   AppSettingsRoute: AppSettingsRoute,
+  AppSourcingRoute: AppSourcingRoute,
 }
 
 const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
