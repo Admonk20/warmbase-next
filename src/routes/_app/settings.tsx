@@ -23,7 +23,7 @@ export const Route = createFileRoute("/_app/settings")({ component: Settings });
 
 const PROVIDERS = [
   { id: "openai", label: "OpenAI", desc: "Optional. Defaults to Lovable AI Gateway (no key required)." },
-  { id: "resend", label: "Resend", desc: "Required to actually send email. resend.com/api-keys" },
+  { id: "resend", label: "Resend", desc: "Optional fallback if you don't configure SMTP. resend.com/api-keys" },
   { id: "hunter", label: "Hunter.io", desc: "Optional. Email finder + verifier. hunter.io/api" },
   { id: "serper", label: "Serper.dev", desc: "Optional. Google search for Lead Finder. serper.dev" },
   { id: "brave", label: "Brave Search", desc: "Optional. Backup search engine. brave.com/search/api" },
@@ -144,7 +144,7 @@ function Settings() {
               ))}
             </div>
           ) : (
-            <p className="text-sm text-muted-foreground">No keys yet. The app works without keys (Lovable AI Gateway powers AI features automatically), but adding a Resend key is required to send actual email.</p>
+            <p className="text-sm text-muted-foreground">No keys yet. The app works without keys — AI uses the Lovable AI Gateway, and email sends via your own SMTP (configure it in the SMTP tab above). Resend is only an optional fallback.</p>
           )}
         </CardContent>
       </Card>
