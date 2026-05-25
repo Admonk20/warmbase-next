@@ -17,7 +17,6 @@ import { Route as AppSettingsRouteImport } from './routes/_app/settings'
 import { Route as AppSequencesRouteImport } from './routes/_app/sequences'
 import { Route as AppPipelineRouteImport } from './routes/_app/pipeline'
 import { Route as AppLeadsRouteImport } from './routes/_app/leads'
-import { Route as AppLeadFinderRouteImport } from './routes/_app/lead-finder'
 import { Route as AppDeliverabilityRouteImport } from './routes/_app/deliverability'
 import { Route as AppDashboardRouteImport } from './routes/_app/dashboard'
 import { Route as AppCampaignsRouteImport } from './routes/_app/campaigns'
@@ -64,11 +63,6 @@ const AppLeadsRoute = AppLeadsRouteImport.update({
   path: '/leads',
   getParentRoute: () => AppRoute,
 } as any)
-const AppLeadFinderRoute = AppLeadFinderRouteImport.update({
-  id: '/lead-finder',
-  path: '/lead-finder',
-  getParentRoute: () => AppRoute,
-} as any)
 const AppDeliverabilityRoute = AppDeliverabilityRouteImport.update({
   id: '/deliverability',
   path: '/deliverability',
@@ -107,7 +101,6 @@ export interface FileRoutesByFullPath {
   '/campaigns': typeof AppCampaignsRoute
   '/dashboard': typeof AppDashboardRoute
   '/deliverability': typeof AppDeliverabilityRoute
-  '/lead-finder': typeof AppLeadFinderRoute
   '/leads': typeof AppLeadsRoute
   '/pipeline': typeof AppPipelineRoute
   '/sequences': typeof AppSequencesRoute
@@ -123,7 +116,6 @@ export interface FileRoutesByTo {
   '/campaigns': typeof AppCampaignsRoute
   '/dashboard': typeof AppDashboardRoute
   '/deliverability': typeof AppDeliverabilityRoute
-  '/lead-finder': typeof AppLeadFinderRoute
   '/leads': typeof AppLeadsRoute
   '/pipeline': typeof AppPipelineRoute
   '/sequences': typeof AppSequencesRoute
@@ -141,7 +133,6 @@ export interface FileRoutesById {
   '/_app/campaigns': typeof AppCampaignsRoute
   '/_app/dashboard': typeof AppDashboardRoute
   '/_app/deliverability': typeof AppDeliverabilityRoute
-  '/_app/lead-finder': typeof AppLeadFinderRoute
   '/_app/leads': typeof AppLeadsRoute
   '/_app/pipeline': typeof AppPipelineRoute
   '/_app/sequences': typeof AppSequencesRoute
@@ -159,7 +150,6 @@ export interface FileRouteTypes {
     | '/campaigns'
     | '/dashboard'
     | '/deliverability'
-    | '/lead-finder'
     | '/leads'
     | '/pipeline'
     | '/sequences'
@@ -175,7 +165,6 @@ export interface FileRouteTypes {
     | '/campaigns'
     | '/dashboard'
     | '/deliverability'
-    | '/lead-finder'
     | '/leads'
     | '/pipeline'
     | '/sequences'
@@ -192,7 +181,6 @@ export interface FileRouteTypes {
     | '/_app/campaigns'
     | '/_app/dashboard'
     | '/_app/deliverability'
-    | '/_app/lead-finder'
     | '/_app/leads'
     | '/_app/pipeline'
     | '/_app/sequences'
@@ -270,13 +258,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppLeadsRouteImport
       parentRoute: typeof AppRoute
     }
-    '/_app/lead-finder': {
-      id: '/_app/lead-finder'
-      path: '/lead-finder'
-      fullPath: '/lead-finder'
-      preLoaderRoute: typeof AppLeadFinderRouteImport
-      parentRoute: typeof AppRoute
-    }
     '/_app/deliverability': {
       id: '/_app/deliverability'
       path: '/deliverability'
@@ -326,7 +307,6 @@ interface AppRouteChildren {
   AppCampaignsRoute: typeof AppCampaignsRoute
   AppDashboardRoute: typeof AppDashboardRoute
   AppDeliverabilityRoute: typeof AppDeliverabilityRoute
-  AppLeadFinderRoute: typeof AppLeadFinderRoute
   AppLeadsRoute: typeof AppLeadsRoute
   AppPipelineRoute: typeof AppPipelineRoute
   AppSequencesRoute: typeof AppSequencesRoute
@@ -338,7 +318,6 @@ const AppRouteChildren: AppRouteChildren = {
   AppCampaignsRoute: AppCampaignsRoute,
   AppDashboardRoute: AppDashboardRoute,
   AppDeliverabilityRoute: AppDeliverabilityRoute,
-  AppLeadFinderRoute: AppLeadFinderRoute,
   AppLeadsRoute: AppLeadsRoute,
   AppPipelineRoute: AppPipelineRoute,
   AppSequencesRoute: AppSequencesRoute,
@@ -359,3 +338,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
