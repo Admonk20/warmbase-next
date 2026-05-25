@@ -1,116 +1,73 @@
-## Goal
+# Status of the original 15
 
-Turn ColdBase into a focused outbound platform: an agentic lead-sourcing engine (Firecrawl + AI), Lovable Emails with open/click/unsubscribe tracking, a kanban pipeline, a deep lead drawer, a real deliverability dashboard, and a robust CSV importer — with redundant pages removed and the UI polished.
+Shipped (infra + wiring):
+1. Per-user SMTP settings (UI + encrypted storage)
+2. Warm-up ramp + daily caps
+3. AI reply classification → auto status updates
+4. Engagement scoring (0–100 hotness, time-decayed)
+5. Spintax + nested variables engine
+6. Reusable email snippets
+7. Duplicate detection + merge
+8. Email finder (pattern guessing + MX validation)
+9. AES-GCM credential encryption
+10. IMAP reply polling
+11. A/B test framework + auto-winner promotion
+12. CSV exports (leads + activity)
+13. Weekly digest stats
+14. IMAP cron endpoint
+15. Reports page UI
 
-## Decisions locked from your answers
-
-- **Email sending → Lovable Emails (built-in).** Free, works with your custom domain, queued with retries and a suppression list. We add open/click/unsubscribe on top.
-- **Lead sourcing → Agentic web pipeline using Firecrawl + Lovable AI.** No paid contact DB; we search the web, scrape company sites/LinkedIn results, extract people + roles, enrich, score, and dedupe. You'll be prompted to connect Firecrawl (has a free tier).
-- **Removals:** Playbook page, old Deliverability checklist page, Email Finder as its own page (folded into Lead Finder as a tab).
-
----
-
-## 1. Lead sourcing engine — agentic, Apollo-style flow
-
-New page **Sourcing** plus a background job model.
-
-```text
-ICP form ─▶ Plan (AI breaks into sub-queries)
-        ─▶ Firecrawl search (Google/LinkedIn/company sites, paged)
-        ─▶ Firecrawl scrape on result URLs (markdown + links)
-        ─▶ AI extractor: people, titles, companies, niche, fit
-        ─▶ Email finder (pattern guess + Hunter optional + MX verify)
-        ─▶ Enrichment (Clearbit autocomplete, site meta, LinkedIn URL)
-        ─▶ Score (1–10) + dedupe vs existing leads
-        ─▶ Insert into `leads` linked to a sourcing_run
-```
-
-- New tables: `sourcing_runs` (icp jsonb, status, counts) and `sourcing_findings` (run_id, raw payload, lead_id once promoted). RLS by user_id.
-- Server functions in `src/lib/sourcing.functions.ts`: `startRun`, `runStep` (chunked work to stay under Worker time limits), `promoteFindings`, `getRun`.
-- UI: ICP wizard (titles, industries, geos, keywords, size), live progress with per-step counts, results table with checkboxes → promote to leads.
-- Falls back gracefully when Firecrawl isn't connected (uses existing Serper key flow or shows connect-Firecrawl CTA).
-
-## 2. Email sending on Lovable Emails + tracking
-
-- Switch outbound from Resend to **Lovable Emails** via the queued infra (`enqueue_email` RPC → process-email-queue dispatcher). Uses your verified domain, no per-email cost.
-- New `tracking_pixels` and `unsubscribe_tokens` tables (or reuse `email_unsubscribe_tokens` from infra).
-- Public server routes under `src/routes/api/public/`:
-  - `track/open.gif` — 1×1 GIF, logs `event_type='opened'` to `email_events`.
-  - `track/click` — 302 redirect, logs `event_type='clicked'` with destination URL.
-  - `unsubscribe` — token-based page, writes to `unsubscribes` + `suppressed_emails`, logs `event_type='unsubscribed'`.
-- Outbound email body is rewritten on send: links wrapped via `track/click?t=…&u=…`, pixel appended, unsubscribe footer added.
-- `sendEmail` server fn now: checks suppression → enqueues via Lovable Emails → inserts `pending` row → dispatcher updates to `sent`/`failed`.
-
-## 3. Deliverability dashboard (replaces checklist page)
-
-Built from `email_events` + `email_send_log`:
-- Time filter (24h / 7d / 30d / custom), template filter, campaign filter.
-- Stat cards: sent, delivered, open rate, click rate, reply rate, bounce, unsubscribe.
-- Cohort view: rows = send-date cohort, columns = days since send, cells = open/reply % (heatmap).
-- Trend chart (sends + opens + replies over time, Recharts).
-- Top-replying campaigns and worst-bouncing domains.
-- All queries deduplicate `email_send_log` by `message_id` (latest status wins).
-
-## 4. Lead drawer with activity timeline
-
-Replaces the current edit modal on the Leads page.
-- Tabs: **Overview**, **Activity**, **Email history**, **Notes**, **Draft email**.
-- Activity = merged timeline of `email_events` (sent/opened/clicked/replied/unsubscribed), status changes, and manual notes, sorted desc.
-- Email history = grouped by thread (subject), expandable to see body + events.
-- Notes = append-only with timestamp; stored in `lead_notes` table (new, RLS by user_id).
-- Draft email tab = the existing LeadDrafter, embedded.
-
-## 5. Kanban pipeline
-
-New `/pipeline` route using `@dnd-kit/core` (Worker-compatible, no native deps).
-- Columns = lead statuses (`new → contacted → engaged → meeting → won/lost`).
-- Cards show contact, company, last activity badge, score, value.
-- Drag updates `leads.status` via Supabase, optimistic UI, undo toast.
-- Per-column WIP counts and total $ value (sum of `leads.value`).
-- Click card → opens the new lead drawer.
-
-## 6. CSV importer with field mapping + dedupe
-
-Replaces the silent CSV path on the Leads page.
-- Step 1: drop CSV, parse headers with PapaParse.
-- Step 2: visual mapper — left: detected columns, right: target fields (contact/email/company/title/phone/niche/linkedin_url/notes/status), with auto-suggest from header names.
-- Step 3: duplicate policy — `skip`, `update existing`, or `create new` (matched on email, then contact+company).
-- Step 4: preview first 10 rows, validation errors highlighted (zod).
-- Step 5: chunked insert with progress bar; summary at end (imported / updated / skipped / errors).
-
-## 7. Cleanup + UI polish
-
-- Delete `src/routes/_app/playbook.tsx`, `src/routes/_app/email-finder.tsx`, `src/routes/_app/deliverability.tsx` (old).
-- Fold Email Finder into Lead Finder as a "Find emails" tab.
-- Refreshed sidebar: Dashboard · Pipeline · Leads · Sourcing · Sequences · Campaigns · Deliverability · Settings.
-- Update `coldbase-constants.ts`, `app-shell.tsx`, `routeTree.gen.ts` (auto).
-- Tighten spacing, unify card/empty/loading states, replace ad-hoc colors with semantic tokens, add framer-motion page transitions.
+Partial / not wired end-to-end:
+- Sourcing background cron (helper exists, no pg_cron schedule yet)
+- Kanban multi-select bar (data model ready, UI not built)
+- pg_cron schedules for `/api/public/cron/imap-poll` (needs SQL after publish)
 
 ---
 
-## Technical section
+# Next 15 upgrades
 
-**New deps:** `@dnd-kit/core`, `@dnd-kit/sortable`, `papaparse`, `@mendable/firecrawl-js`, `react-markdown`, `remark-gfm`, `recharts` (if not present), `framer-motion`.
+Grouped so we can ship in phases without breaking existing flows.
 
-**New tables (migration):**
-- `sourcing_runs` (id, user_id, icp jsonb, status, totals jsonb, created_at, updated_at)
-- `sourcing_findings` (id, run_id, user_id, payload jsonb, lead_id nullable, score int, created_at)
-- `lead_notes` (id, lead_id, user_id, body text, created_at)
-- Extend `email_events` `event_type` enum if missing: `clicked`, `unsubscribed`, `bounced`
-- All RLS = `auth.uid() = user_id`.
+### Deliverability & sending (1–4)
+1. **Bounce/complaint webhook** — `/api/public/hooks/email-events` to ingest Resend/SMTP bounces, auto-suppress hard bounces, decrement reputation.
+2. **Suppression list** — global `suppressions` table (bounced, complained, manual). `sendEmail` checks before every send.
+3. **Send-time optimization** — per-lead timezone + best-hour heuristic from past open events; queue sends to land 9–11am local.
+4. **Link tracking + click attribution** — rewrite outbound links through `/api/public/t/:token`, log click events, attribute to lead/campaign.
 
-**Connectors / infra:**
-- Connect **Firecrawl** (you'll get the connect prompt) — falls back to existing Serper key if not connected.
-- Run `email_domain--setup_email_infra` if not already set, then scaffold transactional sender.
+### Sequences & campaigns (5–8)
+5. **Sequence builder UI** — drag-to-reorder steps, per-step delay, A/B subject, conditional branches (replied → stop).
+6. **Campaign scheduler** — start/end window, daily quota per campaign, throttle (e.g. 1 email / 90s) to look human.
+7. **Reply-aware pause** — when a lead replies or books, auto-pause their sequence across all campaigns.
+8. **Holiday / weekend skip** — per-user calendar of skip dates; sender respects them.
 
-**Server fns (new):** `sourcing.functions.ts`, `tracking.functions.ts`, `notes.functions.ts`, plus updates to `email.functions.ts` (Lovable Emails enqueue + link wrapping + suppression check).
+### Lead intelligence (9–11)
+9. **Company enrichment** — on lead create, call Firecrawl on the company domain → fill industry, size hint, tech stack into `leads.metadata`.
+10. **LinkedIn snapshot** — store last scraped headline/role/recent post for personalization tokens (`{{recent_post}}`).
+11. **Saved views & smart segments** — filter combos saved as named views ("Hot SaaS founders", "Stale 30d+"), used as send targets.
 
-**Public server routes:** `routes/api/public/track/open.gif.ts`, `routes/api/public/track/click.ts`, `routes/api/public/unsubscribe.ts` — input-validated, idempotent, no PII leakage.
+### Pipeline & collaboration (12–13)
+12. **Tasks & reminders** — `tasks` table linked to leads, due dates, snooze, dashboard "Today" widget.
+13. **Team workspaces** — `workspaces` + `workspace_members` with roles (owner/admin/member); RLS scoped to workspace, not just user.
 
-**Migration safety:** All deletions are file-level only; no DB drops. Existing rows in `leads`, `campaigns`, `email_events` keep working — schema is additive.
+### Analytics & growth (14–15)
+14. **Inbox health monitor** — daily IMAP check of spam folder via seed inboxes; surface placement % on dashboard.
+15. **Funnel & cohort analytics** — sent → opened → replied → meeting → won, by campaign and by week cohort, on the Reports page.
 
 ---
 
-## What you'll see when it's done
+## Technical notes
 
-A polished sidebar, a kanban you can drag leads through, a lead drawer that shows every touchpoint, a Sourcing screen where you describe your ICP and watch the agent fill the pipeline, real open/click/reply rates with cohorts, and emails that send from your own domain at $0/email.
+- All new tables get RLS scoped by `auth.uid()` (or `workspace_id` once #13 lands).
+- Webhooks under `/api/public/hooks/*` with HMAC verification.
+- Link tracker uses short tokens stored in a `tracked_links` table; redirect is a 302 with click logged async.
+- Send-time optimization runs in the existing send loop — no new cron needed beyond what we have.
+- #13 (workspaces) is the biggest migration; recommend doing it before #9–12 to avoid double-migrating RLS.
+
+## Suggested rollout order
+
+Phase A (low risk, high value): 1, 2, 4, 12, 15
+Phase B (sending intelligence): 3, 6, 7, 8
+Phase C (lead depth): 9, 10, 11
+Phase D (structural): 13, then 5, 14
+
+Want me to proceed in this order, or pick a different subset to start with?
