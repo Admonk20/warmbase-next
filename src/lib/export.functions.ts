@@ -22,7 +22,7 @@ export const exportLeadsCsv = createServerFn({ method: "POST" })
     let q = context.supabase.from("leads")
       .select("contact, company, title, email, phone, niche, status, temperature, value, source, linkedin_url, last_emailed_at, created_at")
       .eq("user_id", context.userId).limit(5000);
-    if (data.status) q = q.eq("status", data.status);
+    if (data.status) q = q.eq("status", data.status as never);
     const { data: rows, error } = await q;
     if (error) throw new Error(error.message);
     const cols = ["contact","company","title","email","phone","niche","status","temperature","value","source","linkedin_url","last_emailed_at","created_at"];

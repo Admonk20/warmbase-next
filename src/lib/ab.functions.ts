@@ -17,9 +17,8 @@ export const recordAbSend = createServerFn({ method: "POST" })
     const { data: row } = await context.supabase
       .from("ab_tests").select(col).eq("id", data.testId).maybeSingle();
     if (!row) throw new Error("test not found");
-    await context.supabase.from("ab_tests")
-      .update({ [col]: ((row as any)[col] ?? 0) + 1 })
-      .eq("id", data.testId);
+    const patch: Record<string, number> = { [col]: ((row as any)[col] ?? 0) + 1 };
+    await context.supabase.from("ab_tests").update(patch as never).eq("id", data.testId);
     return { ok: true };
   });
 
