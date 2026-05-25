@@ -110,6 +110,11 @@ function Settings() {
 
       <SuppressionsCard />
 
+      <SendPreferencesCard />
+
+      <InboxHealthCard />
+
+
 
       <Card>
         <CardHeader><CardTitle className="text-base flex items-center gap-2"><KeyRound className="size-4" /> API keys</CardTitle></CardHeader>
