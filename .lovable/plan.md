@@ -1,85 +1,66 @@
-# ColdBase Pro — Audit & Rebuild Plan
+# Restore Missing ColdBase Pro Features
 
-I went through the uploaded ZIP (React + Vite + Vercel serverless `/api`, 23 components, ~6.3k LOC). Below is what's wrong, then what I'll change. The project workspace itself is empty, so I'll port the app in cleanly rather than patch the legacy code in place.
+The current build kept the auth + database shell but stripped the actual product. The original is a 943-line React app with 8 feature modules and 13 backend endpoints. This plan ports every one of them onto the new Supabase-backed architecture (RLS-protected, multi-user, no localStorage data).
 
-## 1. Critical issues in the current build
+## What's missing today
 
-### Security
-- **Fake authentication.** `AuthGate.jsx` stores accounts in `localStorage` as `{ email, hash: sha256(email+":"+password) }`. Anyone with devtools can read every account, swap the hash, or flip `cbp3_active_uid` to impersonate any user. No salt, no rate limiting, no email verification, no password reset.
-- **Per-user data is also in localStorage** keyed by a guessable `u_xxxx` UID — bypassable by editing one string in devtools.
-- **Secrets handled client-side.** SMTP password, OpenAI key, Brave key, Hunter key are stored in `localStorage` and **POSTed from the browser to `/api/*` on every call**. They appear in network tabs, browser history, and any XSS payload exfiltrates everything.
-- **`tls: { rejectUnauthorized: false }`** in `api/send-email.js` disables TLS validation — MITM risk.
-- **No input validation / no rate limiting** on any `/api/*` route. `api/scrape-browser.js` (447 lines) accepts arbitrary URLs → SSRF risk against internal addresses.
-- **CORS wide open**, no auth header checked on serverless functions, so anyone who finds the deployed URL can burn the user's OpenAI quota.
-- **`main.jsx` is broken** — the file ends mid-statement (`ReactDOM.createRoot(...).render(` with no closing). The app as shipped does not boot.
+Current routes (`leads`, `dashboard`, `campaigns`, `sequences`, `deliverability`, `settings`) are stubs (5 of them are ~18 lines). None of the AI tools, lead-finder URL generators, email-pattern generator, sequence templates, deliverability checklist, playbook, or AI chatbot exist.
 
-### Architecture / UX
-- **Inline styles everywhere** (AuthGate alone has ~40 style objects). No design system, inconsistent spacing, no dark-mode tokens — dark mode is a single body class toggling ad-hoc CSS in `App.css`.
-- **No router.** Tools are swapped via a `useState` drawer; no deep links, no back button, no shareable URLs.
-- **No persistence across devices.** Everything is localStorage, so leads/campaigns are lost on browser clear or device switch.
-- **No real-time, no collaboration, no audit trail.**
-- **Giant single-purpose components** (Pipeline 459 LOC, ResearchComposer 433, LeadScraper 422) mix data, UI, and API calls.
-- **Two parallel auth concepts** (`cbp3_auth_cred` v1 + `cbp3_accounts` v2) with migration code still shipping.
-- **Keyboard shortcuts hijack single letters** (`d`, `s`, `f`, `c`, `a`, `x`) — collides with normal typing the moment focus leaves an input.
-- **Accessibility:** no focus rings, no aria labels on icon buttons, color-only status indicators, no skip links.
+## What gets rebuilt
 
-### Functionality gaps
-- No email open / click tracking (claims deliverability features but never measures).
-- No background sequence sender — "Sequences" only drafts; nothing actually schedules sends.
-- No bounce / unsubscribe handling (legally required for cold email under CAN-SPAM / GDPR).
-- No team / workspace concept despite "multi-account" UI.
-- Chatbot context is the whole pipeline JSON shipped client-side to OpenAI — leaks PII and blows token limits at scale.
+### Frontend modules (each becomes its own route under `_app/`)
 
-## 2. What I'll build
+1. **Dashboard** — KPI cards (emails sent, open rate, reply rate, meetings, pipeline $, won $), funnel chart, status distribution chart. Data sourced from `campaigns` + `leads` + `email_events` already in Supabase. Uses `recharts` (already installed by shadcn) instead of chart.js.
+2. **Lead Finder** — generates LinkedIn X-ray, Sales Navigator, Google, Apollo, and Maps search URLs from filters (industry/title/location/size/keywords) + Boolean string builder + CSV paste import → writes to `leads` table.
+3. **CRM (Leads)** — full table with status filters, search, status counts, add/edit modal, delete, CSV export. Replaces the current 199-line stub with the original's complete UX.
+4. **Email Finder** — single + bulk email-pattern generator (`first.last@`, `flast@`, etc.), Gmail mailto test, CSV export of bulk results. Pure client-side.
+5. **Sequence Studio** — niche-specific email templates (`NICHE_TEMPLATES` constant), variable replacement (first_name, company, role…), 4-step sequence preview, copy-to-clipboard, mailto open. Templates persist per-user in the existing `sequences` + `sequence_steps` tables; user variable defaults live in `profiles`.
+6. **Campaigns** — list / create / edit campaigns with status, prospects, sent/opened/replied/meetings counters.
+7. **Deliverability** — SPF/DKIM/DMARC/domain/warmup checklist (persisted per-user in a new `deliverability_checks` row keyed by `user_id`), warm-up day/inbox calculator.
+8. **Playbook** — static guide content (cold email best-practices, deliverability, sequencing).
+9. **AI Assistant** — floating chat widget available on every `_app/*` route, calls the chat server fn with the user's pipeline as context.
 
-A clean rebuild on the standard Lovable stack (React + Vite + Tailwind + shadcn/ui) with **Lovable Cloud** as the backend so auth, database, storage, and edge functions are first-class.
+### Backend (TanStack `createServerFn`, replacing the original Vercel `/api/*.js`)
 
-### Backend (Lovable Cloud)
-- Enable Lovable Cloud.
-- **Real auth:** email/password + Google sign-in, email verification on, HIBP leaked-password check on, password reset page at `/reset-password`.
-- **`profiles` table** (id → auth.users, name, company, title, avatar_url) auto-created via trigger on signup.
-- **`user_roles` table** + `app_role` enum (`admin`, `member`) + `has_role()` security-definer function — never store roles on profiles.
-- **Tables with RLS** (owner-only by default): `leads`, `campaigns`, `sequences`, `sequence_steps`, `email_events` (sent / opened / clicked / bounced / replied), `templates`, `ab_tests`, `api_keys` (encrypted column for user-supplied 3rd-party keys), `unsubscribes`.
-- **Edge functions** replacing the `/api/*` routes — each one validates JWT, validates input with zod, enforces per-user rate limits, and pulls secrets server-side:
-  - `send-email` (SMTP via user's stored creds, TLS validation **on**)
-  - `verify-email`, `enrich-lead`, `research-lead`, `find-email`, `search-leads`
-  - `draft-email`, `personalize`, `subject-lines`, `reply-draft`
-  - `chat` (assistant, only sends summarized pipeline stats, not raw PII)
-  - `scrape-url` (with allow-list / block private IP ranges to kill SSRF)
-  - `sequence-runner` (scheduled cron — actually sends the day-1/3/7/14 follow-ups)
-  - `track-open` / `track-click` (pixel + redirect for real deliverability metrics)
-  - `unsubscribe` (one-click compliant link)
-- **Secrets via Lovable AI Gateway** for OpenAI calls — no user OpenAI key required by default; user can still BYOK.
-- **Storage bucket** for CSV imports and exports.
+All 13 endpoints get rewritten as `createServerFn` files in `src/lib/*.functions.ts`, protected with `requireSupabaseAuth`. API keys (OpenAI, Hunter, Serper, Brave, SMTP) come from the existing `user_api_keys` table — never from the client request body.
 
-### Frontend (UI/UX overhaul)
-- shadcn/ui components, Tailwind tokens (HSL semantic colors in `index.css` — primary, surface, muted, success, warning, danger). Light/dark with proper contrast.
-- **Sidebar nav with router** (`react-router-dom`): `/dashboard`, `/leads`, `/leads/:id`, `/sequences`, `/campaigns`, `/inbox`, `/deliverability`, `/ab-tests`, `/settings/*`, `/auth`, `/reset-password`.
-- **Command palette** (⌘K) replaces the single-letter shortcuts.
-- **Pipeline kanban** with drag-and-drop, lead drawer with tabs (activity, emails, notes, AI research).
-- **Live stats dashboard** powered by `email_events` (open rate, reply rate, bounce rate per campaign).
-- **Bulk CSV import** with column mapping, dedupe, validation preview.
-- **Empty states, skeletons, optimistic updates, toast feedback** everywhere.
-- **Accessibility:** semantic HTML, focus-visible rings, aria labels on every icon button, keyboard-navigable kanban, prefers-reduced-motion respected.
-- **SEO:** proper `<title>`, meta description, single H1 per route, canonical tag, JSON-LD on the landing page.
+| Original | New server fn | Purpose |
+|---|---|---|
+| `api/chat.js` | `assistant.functions.ts` → `chat` | AI assistant with pipeline context |
+| `api/clean-leads.js` | `leads.functions.ts` → `cleanLeads` | GPT normalization of scraped leads |
+| `api/draft-email.js` | `email.functions.ts` → `draftEmail` | Stage-aware personalized cold email |
+| `api/enrich.js` | `enrich.functions.ts` → `enrichCompany` | Clearbit autocomplete + meta scrape |
+| `api/hunter.js` | `hunter.functions.ts` → `hunterSearch` | Hunter.io proxy |
+| `api/personalize.js` | `email.functions.ts` → `personalizeBatch` | Batch opening lines |
+| `api/reply-draft.js` | `email.functions.ts` → `draftReply` | Objection-aware reply draft |
+| `api/research-lead.js` | `research.functions.ts` → `researchLead` | OpenAI web-search lead research |
+| `api/scrape-browser.js` | `research.functions.ts` → `searchLeads` | Hybrid OpenAI + Brave lead search |
+| `api/search-leads.js` | `research.functions.ts` → `serperSearch` | Serper/Google CSE proxy |
+| `api/send-email.js` | `email.functions.ts` → `sendEmail` | SMTP send via nodemailer + logs event |
+| `api/subject-lines.js` | `email.functions.ts` → `subjectLines` | 5 alt subject lines |
+| `api/verify-email.js` | `email.functions.ts` → `verifyEmail` | Format + MX-record validation |
 
-### Migration helper
-A one-time "Import from old ColdBase" screen lets existing users paste their exported localStorage JSON to seed their new Cloud account — so nothing is lost.
+Every email send writes a row to `email_events` so the dashboard stays live. AI calls default to **Lovable AI Gateway (`google/gemini-2.5-flash`)** when the user has no OpenAI key in `user_api_keys`, so the app works out of the box without secrets.
 
-## 3. Phasing
+### Database additions (one small migration)
 
-I'll ship in three reviewable steps so you can see progress fast:
+- `deliverability_checks` — one row per user storing the checklist toggles + warmup config.
+- Add `linkedin_url`, `confidence` columns to `leads` (needed by research/clean endpoints).
+- Encrypt `user_api_keys.value_enc` writes with `pgcrypto` (table is already prepared for this); store provider names: `openai`, `hunter`, `serper`, `brave`, `smtp`.
 
-1. **Foundation** — enable Cloud, schema + RLS + roles, auth pages (signup/login/Google/reset), profile bootstrap, app shell with sidebar + routing + theme tokens.
-2. **Core CRM** — Leads CRUD, Pipeline kanban, lead drawer, CSV import, dashboard with real metrics, settings (profile, SMTP, BYOK).
-3. **Engagement engine** — Sequences + cron runner, send-email edge function with tracking pixel + click redirect + unsubscribe, campaigns, A/B tests, AI assistant (chat, draft, personalize, research, subject lines) via Lovable AI Gateway, deliverability dashboard.
+### Settings page
 
-## 4. Technical notes (for reference)
+Becomes the API-key + sender-identity (`yourName`, `yourCompany`, `services`, default SMTP) editor backed by `profiles` + `user_api_keys`. Replaces the current 67-line stub.
 
-- Stack: Vite + React + TS, Tailwind, shadcn/ui, react-router-dom, @tanstack/react-query, zod, react-hook-form, lucide-react, recharts.
-- Backend: Lovable Cloud (Supabase under the hood) — Postgres + RLS + Edge Functions (Deno) + Auth + Storage + scheduled cron.
-- All edge functions: zod-validated body, JWT-checked, CORS via `npm:@supabase/supabase-js@2/cors`, per-user rate limit table.
-- All 3rd-party keys (OpenAI/Brave/Hunter/SMTP) live in a `user_api_keys` table with pgcrypto-encrypted values; never sent from the browser.
-- Default LLM calls go through Lovable AI Gateway (`LOVABLE_API_KEY`) so the user doesn't need to supply OpenAI keys.
+## Out of scope
 
-Approve this and I'll start with Phase 1.
+- Stripe/payments, team workspaces, scheduled-send cron, inbox sync (IMAP). The original didn't have these either.
+- The original `Playbook` is static markdown content — ported as-is, not made editable.
+
+## Delivery order
+
+1. **Migration** — add columns/table, enable `pgcrypto`.
+2. **Server fns** — port all 13 endpoints, wired to `user_api_keys` + Lovable AI Gateway fallback.
+3. **Routes** — replace each stub route with the ported feature (Dashboard, Leads/CRM, Lead Finder, Email Finder, Sequence Studio, Campaigns, Deliverability, Playbook, Settings).
+4. **AI Assistant** — global floating widget.
+5. **Sanity check** — open every route logged-in, confirm no console errors, confirm one email send writes to `email_events`.
