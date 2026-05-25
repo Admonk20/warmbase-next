@@ -1,83 +1,91 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
+import { useMemo } from "react";
+import { Mail, Users, MessageSquare, CalendarCheck, DollarSign, Trophy } from "lucide-react";
 import { getBrowserSupabase } from "@/integrations/supabase/browser-client";
 import { PageHeader } from "@/components/page-header";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Users, Send, MailOpen, Reply, TrendingUp } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { pct, fmt, STATUS_LABELS } from "@/lib/coldbase-constants";
+import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip, Cell } from "recharts";
 
 export const Route = createFileRoute("/_app/dashboard")({ component: Dashboard });
 
-function Stat({ label, value, sub, icon: Icon }: any) {
-  return (
-    <Card>
-      <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
-        <CardTitle className="text-sm font-medium text-muted-foreground">{label}</CardTitle>
-        <Icon className="size-4 text-muted-foreground" />
-      </CardHeader>
-      <CardContent>
-        <div className="text-2xl font-semibold">{value}</div>
-        {sub && <p className="text-xs text-muted-foreground mt-1">{sub}</p>}
-      </CardContent>
-    </Card>
-  );
-}
-
 function Dashboard() {
-  const { data: leads } = useQuery({
-    queryKey: ["leads-count"],
+  const { data } = useQuery({
+    queryKey: ["dashboard"],
     queryFn: async () => {
       const supabase = await getBrowserSupabase();
-      const { count } = await supabase.from("leads").select("*", { count: "exact", head: true });
-      return count ?? 0;
-    },
-  });
-  const { data: events } = useQuery({
-    queryKey: ["events-stats"],
-    queryFn: async () => {
-      const supabase = await getBrowserSupabase();
-      const { data } = await supabase.from("email_events").select("event_type");
-      const arr = data ?? [];
-      const c = (t: string) => arr.filter((r: any) => r.event_type === t).length;
-      return { sent: c("sent"), opened: c("opened"), replied: c("replied") };
-    },
-  });
-  const { data: pipeline } = useQuery({
-    queryKey: ["pipeline"],
-    queryFn: async () => {
-      const supabase = await getBrowserSupabase();
-      const { data } = await supabase.from("leads").select("status");
-      const arr = data ?? [];
-      const c = (s: string) => arr.filter((r: any) => r.status === s).length;
-      return { new: c("new"), contacted: c("contacted"), engaged: c("engaged"), meeting: c("meeting"), won: c("won"), lost: c("lost") };
+      const [leadsR, campsR, evtsR] = await Promise.all([
+        supabase.from("leads").select("status, value").limit(1000),
+        supabase.from("campaigns").select("sent_count, open_count, reply_count, meeting_count").limit(200),
+        supabase.from("email_events").select("event_type").limit(1000),
+      ]);
+      return { leads: leadsR.data ?? [], camps: campsR.data ?? [], evts: evtsR.data ?? [] };
     },
   });
 
-  const openRate = events?.sent ? Math.round((events.opened / events.sent) * 100) : 0;
-  const replyRate = events?.sent ? Math.round((events.replied / events.sent) * 100) : 0;
+  const stats = useMemo(() => {
+    const leads = data?.leads ?? [];
+    const camps = data?.camps ?? [];
+    const sent = camps.reduce((a, c) => a + (c.sent_count ?? 0), 0);
+    const opened = camps.reduce((a, c) => a + (c.open_count ?? 0), 0);
+    const replied = camps.reduce((a, c) => a + (c.reply_count ?? 0), 0);
+    const meetings = camps.reduce((a, c) => a + (c.meeting_count ?? 0), 0);
+    const pipeline = leads.reduce((a, l) => a + Number(l.value ?? 0), 0);
+    const won = leads.filter((l) => l.status === "won").reduce((a, l) => a + Number(l.value ?? 0), 0);
+    const byStatus: Record<string, number> = {};
+    for (const l of leads) byStatus[l.status] = (byStatus[l.status] ?? 0) + 1;
+    const funnel = ["new", "contacted", "engaged", "meeting", "won"].map((s) => ({
+      name: STATUS_LABELS[s], count: byStatus[s] ?? 0, key: s,
+    }));
+    return { sent, opened, replied, meetings, pipeline, won, funnel };
+  }, [data]);
+
+  const colors = ["#3b82f6", "#f59e0b", "#8b5cf6", "#06b6d4", "#10b981"];
+
+  const kpis = [
+    { label: "Emails sent", value: stats.sent, icon: Mail, sub: "All-time" },
+    { label: "Open rate", value: stats.sent ? pct(stats.opened, stats.sent) + "%" : "—", icon: Users, sub: "Target 60%+" },
+    { label: "Reply rate", value: stats.sent ? pct(stats.replied, stats.sent) + "%" : "—", icon: MessageSquare, sub: "Target 15%+" },
+    { label: "Meetings", value: stats.meetings, icon: CalendarCheck, sub: "This pipeline" },
+    { label: "Pipeline", value: fmt(stats.pipeline), icon: DollarSign, sub: "Open lead value" },
+    { label: "Won", value: fmt(stats.won), icon: Trophy, sub: "Closed revenue" },
+  ];
 
   return (
-    <div className="p-6 max-w-7xl mx-auto">
-      <PageHeader title="Dashboard" description="Live snapshot of your pipeline and outreach performance." />
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Stat label="Total leads" value={leads ?? 0} icon={Users} />
-        <Stat label="Emails sent" value={events?.sent ?? 0} icon={Send} />
-        <Stat label="Open rate" value={`${openRate}%`} sub={`${events?.opened ?? 0} opens`} icon={MailOpen} />
-        <Stat label="Reply rate" value={`${replyRate}%`} sub={`${events?.replied ?? 0} replies`} icon={Reply} />
+    <div className="p-6 max-w-7xl mx-auto space-y-6">
+      <PageHeader title="Dashboard" description="Live pipeline metrics, sourced straight from your data." />
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+        {kpis.map((k) => (
+          <Card key={k.label}>
+            <CardHeader className="pb-2">
+              <div className="flex items-center justify-between">
+                <span className="text-xs text-muted-foreground">{k.label}</span>
+                <k.icon className="size-4 text-muted-foreground" />
+              </div>
+            </CardHeader>
+            <CardContent className="pt-0">
+              <div className="text-2xl font-semibold">{k.value}</div>
+              <div className="text-xs text-muted-foreground mt-0.5">{k.sub}</div>
+            </CardContent>
+          </Card>
+        ))}
       </div>
 
-      <Card className="mt-6">
-        <CardHeader>
-          <CardTitle className="text-base flex items-center gap-2"><TrendingUp className="size-4" /> Pipeline</CardTitle>
-          <CardDescription>Lead distribution across stages</CardDescription>
-        </CardHeader>
+      <Card>
+        <CardHeader><CardTitle className="text-base">Pipeline funnel</CardTitle></CardHeader>
         <CardContent>
-          <div className="grid grid-cols-2 md:grid-cols-6 gap-3">
-            {(["new","contacted","engaged","meeting","won","lost"] as const).map((s) => (
-              <div key={s} className="rounded-lg border bg-card p-4">
-                <div className="text-xs uppercase tracking-wide text-muted-foreground">{s}</div>
-                <div className="text-xl font-semibold mt-1">{pipeline?.[s] ?? 0}</div>
-              </div>
-            ))}
+          <div className="h-64">
+            <ResponsiveContainer>
+              <BarChart data={stats.funnel}>
+                <XAxis dataKey="name" tick={{ fontSize: 12 }} />
+                <YAxis allowDecimals={false} tick={{ fontSize: 12 }} />
+                <Tooltip />
+                <Bar dataKey="count" radius={[6, 6, 0, 0]}>
+                  {stats.funnel.map((_, i) => <Cell key={i} fill={colors[i]} />)}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
           </div>
         </CardContent>
       </Card>
