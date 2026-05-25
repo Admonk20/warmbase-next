@@ -3,8 +3,9 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { Plus, Trash2, Loader2, Mail, Download, Upload, Sparkles, Search } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { Plus, Trash2, Loader2, Pencil, Mail, Download, Upload, Sparkles, Search } from "lucide-react";
+import { getBrowserSupabase } from "@/integrations/supabase/browser-client";
+
 import { useAuth } from "@/hooks/use-auth";
 import { personalizeBatch } from "@/lib/email.functions";
 import { PageHeader } from "@/components/page-header";
