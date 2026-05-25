@@ -141,7 +141,3 @@ export function SmtpSettingsCard() {
     </Card>
   );
 }
-      </CardContent>
-    </Card>
-  );
-}
