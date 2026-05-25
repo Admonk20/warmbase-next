@@ -92,20 +92,25 @@ export const enrichCompany = createServerFn({ method: "POST" })
     const query = data.name || data.domain;
     if (!query) throw new Error("domain or name required");
 
-    const result: Record<string, unknown> = { found: false };
+    let name = "";
+    let domain = data.domain ?? "";
+    let logo = "";
+    let description = "";
+    let found = false;
 
     // Clearbit autocomplete (free, no key)
     try {
       const res = await fetch(`https://autocomplete.clearbit.com/v1/companies/suggest?query=${encodeURIComponent(query)}`);
       const arr = (await res.json()) as { name: string; domain: string; logo: string }[];
       if (arr.length) {
-        const m = arr[0];
-        Object.assign(result, { name: m.name, domain: m.domain, logo: m.logo, found: true });
+        name = arr[0].name;
+        domain = arr[0].domain;
+        logo = arr[0].logo;
+        found = true;
       }
     } catch {}
 
     // Try to fetch site meta if we have a domain
-    const domain = (result.domain as string) || data.domain;
     if (domain) {
       try {
         const res = await fetch(`https://${domain}`, { signal: AbortSignal.timeout(5000) });
@@ -113,12 +118,12 @@ export const enrichCompany = createServerFn({ method: "POST" })
         const title = html.match(/<title>(.*?)<\/title>/i)?.[1]?.trim();
         const desc = html.match(/<meta\s+name=["']description["']\s+content=["']([^"']+)["']/i)?.[1]?.trim();
         const ogDesc = html.match(/<meta\s+property=["']og:description["']\s+content=["']([^"']+)["']/i)?.[1]?.trim();
-        if (title && !result.name) result.name = title;
-        result.description = desc ?? ogDesc ?? "";
+        if (title && !name) name = title;
+        description = desc ?? ogDesc ?? "";
       } catch {}
     }
 
-    return result;
+    return { name, domain, logo, description, found };
   });
 
 export const hunterSearch = createServerFn({ method: "POST" })
