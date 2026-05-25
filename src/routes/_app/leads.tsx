@@ -77,6 +77,9 @@ function Leads() {
   const [q, setQ] = useState("");
   const [selected, setSelected] = useState<Record<string, boolean>>({});
   const [drafterLead, setDrafterLead] = useState<any | null>(null);
+  const [drawerLead, setDrawerLead] = useState<any | null>(null);
+  const [csvOpen, setCsvOpen] = useState(false);
+
 
   const { data: leads = [], isLoading } = useQuery({
     queryKey: ["leads"],
