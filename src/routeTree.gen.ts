@@ -15,6 +15,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AppSourcingRouteImport } from './routes/_app/sourcing'
 import { Route as AppSettingsRouteImport } from './routes/_app/settings'
 import { Route as AppSequencesRouteImport } from './routes/_app/sequences'
+import { Route as AppReportsRouteImport } from './routes/_app/reports'
 import { Route as AppPipelineRouteImport } from './routes/_app/pipeline'
 import { Route as AppLeadsRouteImport } from './routes/_app/leads'
 import { Route as AppDeliverabilityRouteImport } from './routes/_app/deliverability'
@@ -52,6 +53,11 @@ const AppSettingsRoute = AppSettingsRouteImport.update({
 const AppSequencesRoute = AppSequencesRouteImport.update({
   id: '/sequences',
   path: '/sequences',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppReportsRoute = AppReportsRouteImport.update({
+  id: '/reports',
+  path: '/reports',
   getParentRoute: () => AppRoute,
 } as any)
 const AppPipelineRoute = AppPipelineRouteImport.update({
@@ -109,6 +115,7 @@ export interface FileRoutesByFullPath {
   '/deliverability': typeof AppDeliverabilityRoute
   '/leads': typeof AppLeadsRoute
   '/pipeline': typeof AppPipelineRoute
+  '/reports': typeof AppReportsRoute
   '/sequences': typeof AppSequencesRoute
   '/settings': typeof AppSettingsRoute
   '/sourcing': typeof AppSourcingRoute
@@ -125,6 +132,7 @@ export interface FileRoutesByTo {
   '/deliverability': typeof AppDeliverabilityRoute
   '/leads': typeof AppLeadsRoute
   '/pipeline': typeof AppPipelineRoute
+  '/reports': typeof AppReportsRoute
   '/sequences': typeof AppSequencesRoute
   '/settings': typeof AppSettingsRoute
   '/sourcing': typeof AppSourcingRoute
@@ -143,6 +151,7 @@ export interface FileRoutesById {
   '/_app/deliverability': typeof AppDeliverabilityRoute
   '/_app/leads': typeof AppLeadsRoute
   '/_app/pipeline': typeof AppPipelineRoute
+  '/_app/reports': typeof AppReportsRoute
   '/_app/sequences': typeof AppSequencesRoute
   '/_app/settings': typeof AppSettingsRoute
   '/_app/sourcing': typeof AppSourcingRoute
@@ -161,6 +170,7 @@ export interface FileRouteTypes {
     | '/deliverability'
     | '/leads'
     | '/pipeline'
+    | '/reports'
     | '/sequences'
     | '/settings'
     | '/sourcing'
@@ -177,6 +187,7 @@ export interface FileRouteTypes {
     | '/deliverability'
     | '/leads'
     | '/pipeline'
+    | '/reports'
     | '/sequences'
     | '/settings'
     | '/sourcing'
@@ -194,6 +205,7 @@ export interface FileRouteTypes {
     | '/_app/deliverability'
     | '/_app/leads'
     | '/_app/pipeline'
+    | '/_app/reports'
     | '/_app/sequences'
     | '/_app/settings'
     | '/_app/sourcing'
@@ -255,6 +267,13 @@ declare module '@tanstack/react-router' {
       path: '/sequences'
       fullPath: '/sequences'
       preLoaderRoute: typeof AppSequencesRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/reports': {
+      id: '/_app/reports'
+      path: '/reports'
+      fullPath: '/reports'
+      preLoaderRoute: typeof AppReportsRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/pipeline': {
@@ -329,6 +348,7 @@ interface AppRouteChildren {
   AppDeliverabilityRoute: typeof AppDeliverabilityRoute
   AppLeadsRoute: typeof AppLeadsRoute
   AppPipelineRoute: typeof AppPipelineRoute
+  AppReportsRoute: typeof AppReportsRoute
   AppSequencesRoute: typeof AppSequencesRoute
   AppSettingsRoute: typeof AppSettingsRoute
   AppSourcingRoute: typeof AppSourcingRoute
@@ -340,6 +360,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppDeliverabilityRoute: AppDeliverabilityRoute,
   AppLeadsRoute: AppLeadsRoute,
   AppPipelineRoute: AppPipelineRoute,
+  AppReportsRoute: AppReportsRoute,
   AppSequencesRoute: AppSequencesRoute,
   AppSettingsRoute: AppSettingsRoute,
   AppSourcingRoute: AppSourcingRoute,
