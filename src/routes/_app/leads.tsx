@@ -352,7 +352,7 @@ function Leads() {
                   </TableCell>
                   <TableCell className="text-right">
                     <Button variant="ghost" size="icon" onClick={() => setDrafterLead(l)} aria-label="Draft email"><Mail className="size-4" /></Button>
-                    <Button variant="ghost" size="icon" onClick={() => openEdit(l)} aria-label="Edit"><Pencil className="size-4" /></Button>
+                    <Button variant="ghost" size="icon" onClick={() => setDrawerLead(l)} aria-label="Open"><Pencil className="size-4" /></Button>
                     <Button variant="ghost" size="icon" onClick={() => remove.mutate([l.id])} aria-label="Delete"><Trash2 className="size-4" /></Button>
                   </TableCell>
                 </TableRow>
