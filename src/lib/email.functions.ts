@@ -381,6 +381,6 @@ export const sendEmail = createServerFn({ method: "POST" })
         .eq("id", data.leadId);
     }
 
-    return { ok: true, id: out?.id ?? null, messageId };
+    return { ok: true, id: providerId, messageId };
   });
 
