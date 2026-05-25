@@ -2,7 +2,7 @@ import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { z } from "zod";
 import { Mail, Lock, Loader2 } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { getBrowserSupabase } from "@/integrations/supabase/browser-client";
 import { lovable } from "@/integrations/lovable/index";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
@@ -37,6 +37,7 @@ function AuthPage() {
     try {
       const em = emailSchema.parse(email);
       const pw = pwSchema.parse(password);
+      const supabase = await getBrowserSupabase();
       if (mode === "signup") {
         const nm = nameSchema.parse(name);
         const { error } = await supabase.auth.signUp({
