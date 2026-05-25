@@ -119,9 +119,9 @@ export function LeadDrafter({ lead, open, onClose }: { lead: Lead | null; open: 
             }} disabled={!lead.email || !subject}>Open in mail app</Button>
             <Button disabled={!lead.email || !subject || !body || loading === "send"} onClick={async () => {
               const r = await run("send", () => send({ data: { to: lead.email!, subject, body, leadId: lead.id } }));
-              if (r?.ok) { toast.success("Sent via Resend"); onClose(); }
+              if (r?.ok) { toast.success("Email sent"); onClose(); }
             }}>
-              {loading === "send" ? <Loader2 className="size-4 animate-spin" /> : <Send className="size-4" />} Send via Resend
+              {loading === "send" ? <Loader2 className="size-4 animate-spin" /> : <Send className="size-4" />} Send email
             </Button>
           </div>
         </div>
