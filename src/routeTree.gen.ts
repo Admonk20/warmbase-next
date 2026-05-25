@@ -24,6 +24,7 @@ import { Route as AppCampaignsRouteImport } from './routes/_app/campaigns'
 import { Route as ApiPublicUnsubscribeRouteImport } from './routes/api/public/unsubscribe'
 import { Route as ApiPublicTrackOpenDotgifRouteImport } from './routes/api/public/track/open[.]gif'
 import { Route as ApiPublicTrackClickRouteImport } from './routes/api/public/track/click'
+import { Route as ApiPublicHooksEmailEventsRouteImport } from './routes/api/public/hooks/email-events'
 import { Route as ApiPublicCronImapPollRouteImport } from './routes/api/public/cron/imap-poll'
 
 const AuthRoute = AuthRouteImport.update({
@@ -101,6 +102,12 @@ const ApiPublicTrackClickRoute = ApiPublicTrackClickRouteImport.update({
   path: '/api/public/track/click',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicHooksEmailEventsRoute =
+  ApiPublicHooksEmailEventsRouteImport.update({
+    id: '/api/public/hooks/email-events',
+    path: '/api/public/hooks/email-events',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicCronImapPollRoute = ApiPublicCronImapPollRouteImport.update({
   id: '/api/public/cron/imap-poll',
   path: '/api/public/cron/imap-poll',
@@ -121,6 +128,7 @@ export interface FileRoutesByFullPath {
   '/sourcing': typeof AppSourcingRoute
   '/api/public/unsubscribe': typeof ApiPublicUnsubscribeRoute
   '/api/public/cron/imap-poll': typeof ApiPublicCronImapPollRoute
+  '/api/public/hooks/email-events': typeof ApiPublicHooksEmailEventsRoute
   '/api/public/track/click': typeof ApiPublicTrackClickRoute
   '/api/public/track/open.gif': typeof ApiPublicTrackOpenDotgifRoute
 }
@@ -138,6 +146,7 @@ export interface FileRoutesByTo {
   '/sourcing': typeof AppSourcingRoute
   '/api/public/unsubscribe': typeof ApiPublicUnsubscribeRoute
   '/api/public/cron/imap-poll': typeof ApiPublicCronImapPollRoute
+  '/api/public/hooks/email-events': typeof ApiPublicHooksEmailEventsRoute
   '/api/public/track/click': typeof ApiPublicTrackClickRoute
   '/api/public/track/open.gif': typeof ApiPublicTrackOpenDotgifRoute
 }
@@ -157,6 +166,7 @@ export interface FileRoutesById {
   '/_app/sourcing': typeof AppSourcingRoute
   '/api/public/unsubscribe': typeof ApiPublicUnsubscribeRoute
   '/api/public/cron/imap-poll': typeof ApiPublicCronImapPollRoute
+  '/api/public/hooks/email-events': typeof ApiPublicHooksEmailEventsRoute
   '/api/public/track/click': typeof ApiPublicTrackClickRoute
   '/api/public/track/open.gif': typeof ApiPublicTrackOpenDotgifRoute
 }
@@ -176,6 +186,7 @@ export interface FileRouteTypes {
     | '/sourcing'
     | '/api/public/unsubscribe'
     | '/api/public/cron/imap-poll'
+    | '/api/public/hooks/email-events'
     | '/api/public/track/click'
     | '/api/public/track/open.gif'
   fileRoutesByTo: FileRoutesByTo
@@ -193,6 +204,7 @@ export interface FileRouteTypes {
     | '/sourcing'
     | '/api/public/unsubscribe'
     | '/api/public/cron/imap-poll'
+    | '/api/public/hooks/email-events'
     | '/api/public/track/click'
     | '/api/public/track/open.gif'
   id:
@@ -211,6 +223,7 @@ export interface FileRouteTypes {
     | '/_app/sourcing'
     | '/api/public/unsubscribe'
     | '/api/public/cron/imap-poll'
+    | '/api/public/hooks/email-events'
     | '/api/public/track/click'
     | '/api/public/track/open.gif'
   fileRoutesById: FileRoutesById
@@ -221,6 +234,7 @@ export interface RootRouteChildren {
   AuthRoute: typeof AuthRoute
   ApiPublicUnsubscribeRoute: typeof ApiPublicUnsubscribeRoute
   ApiPublicCronImapPollRoute: typeof ApiPublicCronImapPollRoute
+  ApiPublicHooksEmailEventsRoute: typeof ApiPublicHooksEmailEventsRoute
   ApiPublicTrackClickRoute: typeof ApiPublicTrackClickRoute
   ApiPublicTrackOpenDotgifRoute: typeof ApiPublicTrackOpenDotgifRoute
 }
@@ -332,6 +346,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicTrackClickRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/hooks/email-events': {
+      id: '/api/public/hooks/email-events'
+      path: '/api/public/hooks/email-events'
+      fullPath: '/api/public/hooks/email-events'
+      preLoaderRoute: typeof ApiPublicHooksEmailEventsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/cron/imap-poll': {
       id: '/api/public/cron/imap-poll'
       path: '/api/public/cron/imap-poll'
@@ -374,9 +395,20 @@ const rootRouteChildren: RootRouteChildren = {
   AuthRoute: AuthRoute,
   ApiPublicUnsubscribeRoute: ApiPublicUnsubscribeRoute,
   ApiPublicCronImapPollRoute: ApiPublicCronImapPollRoute,
+  ApiPublicHooksEmailEventsRoute: ApiPublicHooksEmailEventsRoute,
   ApiPublicTrackClickRoute: ApiPublicTrackClickRoute,
   ApiPublicTrackOpenDotgifRoute: ApiPublicTrackOpenDotgifRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
