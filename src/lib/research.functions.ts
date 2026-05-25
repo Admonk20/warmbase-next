@@ -158,6 +158,7 @@ export const hunterSearch = createServerFn({ method: "POST" })
       case "email-verifier":
         url = `${BASE}/email-verifier?email=${encodeURIComponent(data.email ?? "")}&api_key=${key}`; break;
     }
+    const res = await fetch(url);
     const json = await res.text();
     return { raw: json };
   });
