@@ -137,9 +137,9 @@ export function CsvImporter({ open, onOpenChange, onDone }: { open: boolean; onO
       if (existingId) {
         if (dupPolicy === "skip") { skipped++; }
         else if (dupPolicy === "update") {
-          const { user_id, ...patch } = lead;
-          void user_id;
-          const { error } = await supabase.from("leads").update(patch).eq("id", existingId);
+          const { user_id: _u, ...patch } = lead;
+          void _u;
+          const { error } = await supabase.from("leads").update(patch as never).eq("id", existingId);
           if (error) errors++; else updated++;
         } else {
           toInsert.push(lead);
@@ -206,7 +206,7 @@ export function CsvImporter({ open, onOpenChange, onDone }: { open: boolean; onO
                           <SelectContent>
                             <SelectItem value="_skip">— Skip —</SelectItem>
                             {TARGET_FIELDS.map((f) => (
-                              <SelectItem key={f.key} value={f.key}>{f.label}{f.required ? " *" : ""}</SelectItem>
+                              <SelectItem key={f.key} value={f.key}>{f.label}{"required" in f && f.required ? " *" : ""}</SelectItem>
                             ))}
                           </SelectContent>
                         </Select>

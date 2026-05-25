@@ -56,7 +56,7 @@ export function KanbanBoard({ onCardClick }: { onCardClick?: (id: string) => voi
     if (!lead || lead.status === newStatus) return;
     const oldStatus = lead.status;
     setLeads((prev) => prev.map((l) => (l.id === id ? { ...l, status: newStatus } : l)));
-    const { error } = await supabase.from("leads").update({ status: newStatus }).eq("id", id);
+    const { error } = await supabase.from("leads").update({ status: newStatus as never }).eq("id", id);
     if (error) {
       setLeads((prev) => prev.map((l) => (l.id === id ? { ...l, status: oldStatus } : l)));
       toast.error("Failed to move lead");
@@ -65,7 +65,7 @@ export function KanbanBoard({ onCardClick }: { onCardClick?: (id: string) => voi
         action: {
           label: "Undo",
           onClick: async () => {
-            await supabase.from("leads").update({ status: oldStatus }).eq("id", id);
+            await supabase.from("leads").update({ status: oldStatus as never }).eq("id", id);
             setLeads((prev) => prev.map((l) => (l.id === id ? { ...l, status: oldStatus } : l)));
           },
         },
