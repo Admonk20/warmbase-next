@@ -67,6 +67,7 @@ export type Database = {
           created_at: string
           description: string | null
           id: string
+          meeting_count: number
           name: string
           open_count: number
           reply_count: number
@@ -79,6 +80,7 @@ export type Database = {
           created_at?: string
           description?: string | null
           id?: string
+          meeting_count?: number
           name: string
           open_count?: number
           reply_count?: number
@@ -91,6 +93,7 @@ export type Database = {
           created_at?: string
           description?: string | null
           id?: string
+          meeting_count?: number
           name?: string
           open_count?: number
           reply_count?: number
@@ -98,6 +101,51 @@ export type Database = {
           status?: string
           updated_at?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      deliverability_checks: {
+        Row: {
+          dkim: boolean
+          dmarc: boolean
+          domains: boolean
+          inboxes: number
+          limits: boolean
+          reply: boolean
+          spf: boolean
+          start_date: string
+          unsub: boolean
+          updated_at: string
+          user_id: string
+          warmup: boolean
+        }
+        Insert: {
+          dkim?: boolean
+          dmarc?: boolean
+          domains?: boolean
+          inboxes?: number
+          limits?: boolean
+          reply?: boolean
+          spf?: boolean
+          start_date?: string
+          unsub?: boolean
+          updated_at?: string
+          user_id: string
+          warmup?: boolean
+        }
+        Update: {
+          dkim?: boolean
+          dmarc?: boolean
+          domains?: boolean
+          inboxes?: number
+          limits?: boolean
+          reply?: boolean
+          spf?: boolean
+          start_date?: string
+          unsub?: boolean
+          updated_at?: string
+          user_id?: string
+          warmup?: boolean
         }
         Relationships: []
       }
@@ -152,11 +200,13 @@ export type Database = {
       leads: {
         Row: {
           company: string | null
+          confidence: string | null
           contact: string
           created_at: string
           email: string | null
           id: string
           last_emailed_at: string | null
+          linkedin_url: string | null
           niche: string | null
           notes: string | null
           phone: string | null
@@ -171,11 +221,13 @@ export type Database = {
         }
         Insert: {
           company?: string | null
+          confidence?: string | null
           contact: string
           created_at?: string
           email?: string | null
           id?: string
           last_emailed_at?: string | null
+          linkedin_url?: string | null
           niche?: string | null
           notes?: string | null
           phone?: string | null
@@ -190,11 +242,13 @@ export type Database = {
         }
         Update: {
           company?: string | null
+          confidence?: string | null
           contact?: string
           created_at?: string
           email?: string | null
           id?: string
           last_emailed_at?: string | null
+          linkedin_url?: string | null
           niche?: string | null
           notes?: string | null
           phone?: string | null
