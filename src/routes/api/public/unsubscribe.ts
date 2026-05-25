@@ -32,9 +32,18 @@ export const Route = createFileRoute("/api/public/unsubscribe")({
               status: 404, headers: { "Content-Type": "text/html" },
             });
           }
-          await supabaseAdmin
+          // Insert unsubscribe if not already present
+          const { data: existing } = await supabaseAdmin
             .from("unsubscribes")
-            .upsert({ user_id: tok.user_id, email: tok.email, reason: "one-click" }, { onConflict: "user_id,email" });
+            .select("id")
+            .eq("user_id", tok.user_id)
+            .eq("email", tok.email)
+            .maybeSingle();
+          if (!existing) {
+            await supabaseAdmin
+              .from("unsubscribes")
+              .insert({ user_id: tok.user_id, email: tok.email, reason: "one-click" });
+          }
           await supabaseAdmin.from("email_events").insert({
             user_id: tok.user_id,
             event_type: "unsubscribed",
