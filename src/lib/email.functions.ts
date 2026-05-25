@@ -2,6 +2,13 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { chatCompletion, getUserOpenAIKey, getUserKey } from "./ai.server";
+import {
+  getAppBaseUrl,
+  htmlFromText,
+  newMessageId,
+  newUnsubToken,
+  wrapBody,
+} from "./email-tracking.server";
 
 const STAGE_CONTEXT: Record<string, { goal: string; tone: string; cta: string }> = {
   new: {
