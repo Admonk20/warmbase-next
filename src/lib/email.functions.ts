@@ -239,6 +239,8 @@ export const sendEmail = createServerFn({ method: "POST" })
       campaignId: z.string().uuid().optional(),
       fromName: z.string().max(120).optional(),
       fromEmail: z.string().email().max(255).optional(),
+      ignoreSendWindow: z.boolean().optional(),
+      trackLinks: z.boolean().optional(),
     }).parse,
   )
   .handler(async ({ data, context }) => {
@@ -263,6 +265,30 @@ export const sendEmail = createServerFn({ method: "POST" })
       });
       throw new Error(`${to} is on the suppression list (${reason}).`);
     }
+
+    // 1b. Reply-aware pause + send-window check
+    if (data.leadId) {
+      const { data: lead } = await context.supabase.from("leads")
+        .select("sequence_paused, replied_at, timezone, best_send_hour")
+        .eq("id", data.leadId).maybeSingle();
+      if (lead?.sequence_paused || lead?.replied_at) {
+        throw new Error("Lead has replied or sequence is paused — auto-skipping.");
+      }
+      if (!data.ignoreSendWindow) {
+        const { data: prefs } = await context.supabase.from("user_send_preferences")
+          .select("*").eq("user_id", context.userId).maybeSingle();
+        const { sendabilityCheck } = await import("./send-timing.server");
+        const check = sendabilityCheck({
+          prefs: prefs ?? null,
+          leadTimezone: lead?.timezone ?? null,
+          leadBestHour: lead?.best_send_hour ?? null,
+        });
+        if (!check.allowed) {
+          throw new Error(`Outside sending window (${check.reason}). Set ignoreSendWindow to override.`);
+        }
+      }
+    }
+
 
 
     // 2. Provider: prefer per-user SMTP, fall back to Resend.
@@ -300,10 +326,31 @@ export const sendEmail = createServerFn({ method: "POST" })
       .insert({ token: unsubToken, user_id: context.userId, email: to });
 
     const baseUrl = getAppBaseUrl();
-    const htmlBase = htmlFromText(data.body);
+
+    // Optional link rewriting
+    let workingBody = data.body;
+    if (data.trackLinks !== false) {
+      const urlRe = /\bhttps?:\/\/[^\s<>"')]+/g;
+      const inserts: Array<{ user_id: string; token: string; target_url: string; lead_id: string | null; campaign_id: string | null }> = [];
+      workingBody = data.body.replace(urlRe, (url) => {
+        if (url.includes("/api/public/track/") || url.includes("/api/public/unsubscribe") || url.includes("/api/public/t/")) return url;
+        const token = Array.from(crypto.getRandomValues(new Uint8Array(9))).map((b) => b.toString(36).padStart(2, "0")).join("").slice(0, 12);
+        inserts.push({
+          user_id: context.userId, token, target_url: url,
+          lead_id: data.leadId ?? null, campaign_id: data.campaignId ?? null,
+        });
+        return `${baseUrl}/api/public/t/${token}`;
+      });
+      if (inserts.length > 0) {
+        await context.supabase.from("tracked_links").insert(inserts);
+      }
+    }
+
+    const htmlBase = htmlFromText(workingBody);
     const html = wrapBody({ body: htmlBase, isHtml: true, baseUrl, messageId, unsubToken });
-    const text = wrapBody({ body: data.body, isHtml: false, baseUrl, messageId, unsubToken });
+    const text = wrapBody({ body: workingBody, isHtml: false, baseUrl, messageId, unsubToken });
     const listUnsub = `<${baseUrl}/api/public/unsubscribe?t=${unsubToken}>`;
+
 
     let providerId: string | null = null;
     let provider = "smtp";

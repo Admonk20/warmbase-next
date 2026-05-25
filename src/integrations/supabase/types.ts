@@ -65,40 +65,58 @@ export type Database = {
       campaigns: {
         Row: {
           created_at: string
+          daily_quota: number
           description: string | null
+          end_at: string | null
           id: string
           meeting_count: number
           name: string
           open_count: number
           reply_count: number
+          send_end_hour: number
+          send_start_hour: number
           sent_count: number
+          start_at: string | null
           status: string
+          throttle_seconds: number
           updated_at: string
           user_id: string
         }
         Insert: {
           created_at?: string
+          daily_quota?: number
           description?: string | null
+          end_at?: string | null
           id?: string
           meeting_count?: number
           name: string
           open_count?: number
           reply_count?: number
+          send_end_hour?: number
+          send_start_hour?: number
           sent_count?: number
+          start_at?: string | null
           status?: string
+          throttle_seconds?: number
           updated_at?: string
           user_id: string
         }
         Update: {
           created_at?: string
+          daily_quota?: number
           description?: string | null
+          end_at?: string | null
           id?: string
           meeting_count?: number
           name?: string
           open_count?: number
           reply_count?: number
+          send_end_hour?: number
+          send_start_hour?: number
           sent_count?: number
+          start_at?: string | null
           status?: string
+          throttle_seconds?: number
           updated_at?: string
           user_id?: string
         }
@@ -288,15 +306,18 @@ export type Database = {
       }
       leads: {
         Row: {
+          best_send_hour: number | null
           company: string | null
           confidence: string | null
           contact: string
           created_at: string
           email: string | null
           engagement_score: number
+          enrichment: Json
           id: string
           last_emailed_at: string | null
           last_engaged_at: string | null
+          linkedin_snapshot: Json
           linkedin_url: string | null
           merged_into_id: string | null
           niche: string | null
@@ -304,6 +325,7 @@ export type Database = {
           phone: string | null
           replied_at: string | null
           seq_step: number
+          sequence_paused: boolean
           source: string | null
           status: Database["public"]["Enums"]["lead_status"]
           temperature: Database["public"]["Enums"]["lead_temp"]
@@ -314,15 +336,18 @@ export type Database = {
           value: number | null
         }
         Insert: {
+          best_send_hour?: number | null
           company?: string | null
           confidence?: string | null
           contact: string
           created_at?: string
           email?: string | null
           engagement_score?: number
+          enrichment?: Json
           id?: string
           last_emailed_at?: string | null
           last_engaged_at?: string | null
+          linkedin_snapshot?: Json
           linkedin_url?: string | null
           merged_into_id?: string | null
           niche?: string | null
@@ -330,6 +355,7 @@ export type Database = {
           phone?: string | null
           replied_at?: string | null
           seq_step?: number
+          sequence_paused?: boolean
           source?: string | null
           status?: Database["public"]["Enums"]["lead_status"]
           temperature?: Database["public"]["Enums"]["lead_temp"]
@@ -340,15 +366,18 @@ export type Database = {
           value?: number | null
         }
         Update: {
+          best_send_hour?: number | null
           company?: string | null
           confidence?: string | null
           contact?: string
           created_at?: string
           email?: string | null
           engagement_score?: number
+          enrichment?: Json
           id?: string
           last_emailed_at?: string | null
           last_engaged_at?: string | null
+          linkedin_snapshot?: Json
           linkedin_url?: string | null
           merged_into_id?: string | null
           niche?: string | null
@@ -356,6 +385,7 @@ export type Database = {
           phone?: string | null
           replied_at?: string | null
           seq_step?: number
+          sequence_paused?: boolean
           source?: string | null
           status?: Database["public"]["Enums"]["lead_status"]
           temperature?: Database["public"]["Enums"]["lead_temp"]
@@ -394,6 +424,69 @@ export type Database = {
           id?: string
           title?: string | null
           updated_at?: string
+        }
+        Relationships: []
+      }
+      saved_views: {
+        Row: {
+          created_at: string
+          filters: Json
+          id: string
+          name: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          filters?: Json
+          id?: string
+          name: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          filters?: Json
+          id?: string
+          name?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      seed_inboxes: {
+        Row: {
+          created_at: string
+          email: string
+          id: string
+          last_checked_at: string | null
+          last_inbox: boolean | null
+          last_missing: boolean | null
+          last_spam: boolean | null
+          provider: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          id?: string
+          last_checked_at?: string | null
+          last_inbox?: boolean | null
+          last_missing?: boolean | null
+          last_spam?: boolean | null
+          provider?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          id?: string
+          last_checked_at?: string | null
+          last_inbox?: boolean | null
+          last_missing?: boolean | null
+          last_spam?: boolean | null
+          provider?: string | null
+          user_id?: string
         }
         Relationships: []
       }
@@ -680,6 +773,42 @@ export type Database = {
         }
         Relationships: []
       }
+      tracked_links: {
+        Row: {
+          campaign_id: string | null
+          click_count: number
+          created_at: string
+          id: string
+          last_clicked_at: string | null
+          lead_id: string | null
+          target_url: string
+          token: string
+          user_id: string
+        }
+        Insert: {
+          campaign_id?: string | null
+          click_count?: number
+          created_at?: string
+          id?: string
+          last_clicked_at?: string | null
+          lead_id?: string | null
+          target_url: string
+          token: string
+          user_id: string
+        }
+        Update: {
+          campaign_id?: string | null
+          click_count?: number
+          created_at?: string
+          id?: string
+          last_clicked_at?: string | null
+          lead_id?: string | null
+          target_url?: string
+          token?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       unsubscribes: {
         Row: {
           created_at: string
@@ -748,6 +877,39 @@ export type Database = {
           created_at?: string
           id?: string
           role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_send_preferences: {
+        Row: {
+          default_timezone: string
+          holiday_dates: string[]
+          send_end_hour: number
+          send_start_hour: number
+          skip_weekends: boolean
+          throttle_seconds: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          default_timezone?: string
+          holiday_dates?: string[]
+          send_end_hour?: number
+          send_start_hour?: number
+          skip_weekends?: boolean
+          throttle_seconds?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          default_timezone?: string
+          holiday_dates?: string[]
+          send_end_hour?: number
+          send_start_hour?: number
+          skip_weekends?: boolean
+          throttle_seconds?: number
+          updated_at?: string
           user_id?: string
         }
         Relationships: []

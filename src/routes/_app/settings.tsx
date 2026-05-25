@@ -14,6 +14,9 @@ import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@
 import { toast } from "sonner";
 import { SmtpSettingsCard } from "@/components/smtp-settings";
 import { SuppressionsCard } from "@/components/suppressions-card";
+import { SendPreferencesCard } from "@/components/send-preferences-card";
+import { InboxHealthCard } from "@/components/inbox-health-card";
+
 
 
 export const Route = createFileRoute("/_app/settings")({ component: Settings });
@@ -106,6 +109,11 @@ function Settings() {
       <SmtpSettingsCard />
 
       <SuppressionsCard />
+
+      <SendPreferencesCard />
+
+      <InboxHealthCard />
+
 
 
       <Card>
