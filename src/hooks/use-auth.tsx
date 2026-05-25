@@ -1,6 +1,6 @@
 import { useEffect, useState, createContext, useContext, type ReactNode } from "react";
 import type { Session, User } from "@supabase/supabase-js";
-import { supabase } from "@/integrations/supabase/client";
+import { getBrowserSupabase } from "@/integrations/supabase/browser-client";
 
 type AuthCtx = {
   user: User | null;
@@ -16,15 +16,37 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const { data: sub } = supabase.auth.onAuthStateChange((_e, s) => {
-      setSession(s);
-      setLoading(false);
-    });
-    supabase.auth.getSession().then(({ data }) => {
-      setSession(data.session);
-      setLoading(false);
-    });
-    return () => sub.subscription.unsubscribe();
+    let mounted = true;
+    let unsubscribe: (() => void) | undefined;
+
+    void (async () => {
+      try {
+        const supabase = await getBrowserSupabase();
+        if (!mounted) return;
+
+        const { data: sub } = supabase.auth.onAuthStateChange((_e, s) => {
+          if (!mounted) return;
+          setSession(s);
+          setLoading(false);
+        });
+
+        unsubscribe = () => sub.subscription.unsubscribe();
+
+        const { data } = await supabase.auth.getSession();
+        if (!mounted) return;
+
+        setSession(data.session);
+        setLoading(false);
+      } catch (error) {
+        console.error(error);
+        if (mounted) setLoading(false);
+      }
+    })();
+
+    return () => {
+      mounted = false;
+      unsubscribe?.();
+    };
   }, []);
 
   return (
@@ -34,6 +56,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         session,
         loading,
         signOut: async () => {
+          const supabase = await getBrowserSupabase();
           await supabase.auth.signOut();
         },
       }}
