@@ -263,12 +263,31 @@ export const sendEmail = createServerFn({ method: "POST" })
       throw new Error(`${to} has unsubscribed and is on the suppression list.`);
     }
 
-    // 2. Provider check (Resend for now; Lovable Emails infra is recommended once domain is set up)
-    const resendKey = await getUserKey(context.supabase, context.userId, "resend");
-    if (!resendKey) {
-      throw new Error(
-        "No email sender configured. Add a Resend API key in Settings → API Keys, or enable Lovable Emails by setting up your sender domain.",
-      );
+    // 2. Provider: prefer per-user SMTP, fall back to Resend.
+    const { data: smtpRow } = await context.supabase
+      .from("user_smtp_settings")
+      .select("*")
+      .eq("user_id", context.userId)
+      .maybeSingle();
+
+    // Reset daily counter if needed
+    if (smtpRow) {
+      const today = new Date().toISOString().slice(0, 10);
+      if (smtpRow.last_reset_date !== today) {
+        const newDay = smtpRow.warmup_enabled ? (smtpRow.warmup_day ?? 0) + 1 : smtpRow.warmup_day ?? 0;
+        await context.supabase.from("user_smtp_settings").update({
+          sent_today: 0, last_reset_date: today, warmup_day: newDay,
+        }).eq("user_id", context.userId);
+        smtpRow.sent_today = 0;
+        smtpRow.warmup_day = newDay;
+      }
+      const { warmupCap } = await import("./smtp.server");
+      const cap = smtpRow.warmup_enabled
+        ? warmupCap(smtpRow.warmup_day ?? 0, smtpRow.daily_cap ?? 50)
+        : (smtpRow.daily_cap ?? 50);
+      if ((smtpRow.sent_today ?? 0) >= cap) {
+        throw new Error(`Daily sending cap reached (${cap}). Resets at midnight.`);
+      }
     }
 
     // 3. Build tracked body
@@ -280,49 +299,61 @@ export const sendEmail = createServerFn({ method: "POST" })
 
     const baseUrl = getAppBaseUrl();
     const htmlBase = htmlFromText(data.body);
-    const html = wrapBody({
-      body: htmlBase,
-      isHtml: true,
-      baseUrl,
-      messageId,
-      unsubToken,
-    });
-    const text = wrapBody({
-      body: data.body,
-      isHtml: false,
-      baseUrl,
-      messageId,
-      unsubToken,
-    });
+    const html = wrapBody({ body: htmlBase, isHtml: true, baseUrl, messageId, unsubToken });
+    const text = wrapBody({ body: data.body, isHtml: false, baseUrl, messageId, unsubToken });
+    const listUnsub = `<${baseUrl}/api/public/unsubscribe?t=${unsubToken}>`;
 
-    const fromEmail = data.fromEmail ?? "onboarding@resend.dev";
-    const fromName = data.fromName ?? "ColdBase Pro";
+    let providerId: string | null = null;
+    let provider = "smtp";
 
-    const res = await fetch("https://api.resend.com/emails", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${resendKey}`, "Content-Type": "application/json" },
-      body: JSON.stringify({
-        from: `${fromName} <${fromEmail}>`,
-        to: [to],
-        subject: data.subject,
-        html,
-        text,
-        headers: { "List-Unsubscribe": `<${baseUrl}/api/public/unsubscribe?t=${unsubToken}>` },
-      }),
-    });
-    if (!res.ok) {
-      const t = await res.text().catch(() => "");
-      await context.supabase.from("email_events").insert({
-        user_id: context.userId,
-        lead_id: data.leadId ?? null,
-        campaign_id: data.campaignId ?? null,
-        event_type: "failed",
-        subject: data.subject,
-        metadata: { to, message_id: messageId, error: t.slice(0, 200), status: res.status },
+    if (smtpRow) {
+      const { smtpSend } = await import("./smtp.server");
+      try {
+        const res = await smtpSend(smtpRow as any, {
+          to, subject: data.subject, html, text, messageId,
+          headers: { "List-Unsubscribe": listUnsub, "List-Unsubscribe-Post": "List-Unsubscribe=One-Click" },
+        });
+        providerId = res.id ?? null;
+        await context.supabase.from("user_smtp_settings")
+          .update({ sent_today: (smtpRow.sent_today ?? 0) + 1 })
+          .eq("user_id", context.userId);
+      } catch (e: any) {
+        const msg = String(e?.message ?? e).slice(0, 300);
+        await context.supabase.from("email_events").insert({
+          user_id: context.userId, lead_id: data.leadId ?? null, campaign_id: data.campaignId ?? null,
+          event_type: "failed", subject: data.subject,
+          metadata: { to, message_id: messageId, error: msg, provider: "smtp" },
+        });
+        throw new Error(`SMTP send failed: ${msg}`);
+      }
+    } else {
+      const resendKey = await getUserKey(context.supabase, context.userId, "resend");
+      if (!resendKey) {
+        throw new Error("No email sender configured. Add SMTP in Settings → SMTP, or add a Resend API key.");
+      }
+      provider = "resend";
+      const fromEmail = data.fromEmail ?? "onboarding@resend.dev";
+      const fromName = data.fromName ?? "ColdBase Pro";
+      const res = await fetch("https://api.resend.com/emails", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${resendKey}`, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          from: `${fromName} <${fromEmail}>`, to: [to], subject: data.subject, html, text,
+          headers: { "List-Unsubscribe": listUnsub },
+        }),
       });
-      throw new Error(`Email send failed (${res.status}): ${t.slice(0, 200)}`);
+      if (!res.ok) {
+        const t = await res.text().catch(() => "");
+        await context.supabase.from("email_events").insert({
+          user_id: context.userId, lead_id: data.leadId ?? null, campaign_id: data.campaignId ?? null,
+          event_type: "failed", subject: data.subject,
+          metadata: { to, message_id: messageId, error: t.slice(0, 200), status: res.status, provider: "resend" },
+        });
+        throw new Error(`Email send failed (${res.status}): ${t.slice(0, 200)}`);
+      }
+      const out = (await res.json()) as { id?: string };
+      providerId = out?.id ?? null;
     }
-    const out = (await res.json()) as { id?: string };
 
     await context.supabase.from("email_events").insert({
       user_id: context.userId,
@@ -330,7 +361,7 @@ export const sendEmail = createServerFn({ method: "POST" })
       campaign_id: data.campaignId ?? null,
       event_type: "sent",
       subject: data.subject,
-      metadata: { to, message_id: messageId, provider: "resend", provider_id: out?.id ?? null },
+      metadata: { to, message_id: messageId, provider, provider_id: providerId },
     });
 
     if (data.campaignId) {
@@ -350,6 +381,6 @@ export const sendEmail = createServerFn({ method: "POST" })
         .eq("id", data.leadId);
     }
 
-    return { ok: true, id: out?.id ?? null, messageId };
+    return { ok: true, id: providerId, messageId };
   });
 

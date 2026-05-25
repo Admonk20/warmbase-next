@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { toast } from "sonner";
+import { SmtpSettingsCard } from "@/components/smtp-settings";
 
 export const Route = createFileRoute("/_app/settings")({ component: Settings });
 
@@ -99,6 +100,8 @@ function Settings() {
           </Button>
         </CardContent>
       </Card>
+
+      <SmtpSettingsCard />
 
       <Card>
         <CardHeader><CardTitle className="text-base flex items-center gap-2"><KeyRound className="size-4" /> API keys</CardTitle></CardHeader>
