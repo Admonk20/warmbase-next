@@ -24,11 +24,22 @@ function Reports() {
   const digestFn = useServerFn(weeklyDigest);
   const leadsFn = useServerFn(exportLeadsCsv);
   const activityFn = useServerFn(exportActivityCsv);
+  const funnelFn = useServerFn(funnel);
+  const cohortsFn = useServerFn(cohorts);
 
   const { data, isLoading } = useQuery({
     queryKey: ["weekly-digest"],
     queryFn: () => digestFn(),
   });
+  const { data: fn } = useQuery({
+    queryKey: ["funnel", 30],
+    queryFn: () => funnelFn({ data: { days: 30 } }),
+  });
+  const { data: co } = useQuery({
+    queryKey: ["cohorts", 8],
+    queryFn: () => cohortsFn({ data: { weeks: 8 } }),
+  });
+
 
   async function exportLeads() {
     try {
