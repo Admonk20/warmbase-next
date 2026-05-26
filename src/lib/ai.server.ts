@@ -22,23 +22,39 @@ type ChatMsg = { role: "system" | "user" | "assistant"; content: string };
 export async function chatCompletion({
   messages,
   openaiKey,
+  kimiKey,
   model,
   json,
   temperature = 0.7,
 }: {
   messages: ChatMsg[];
   openaiKey?: string | null;
+  kimiKey?: string | null;
   model?: string;
   json?: boolean;
   temperature?: number;
 }): Promise<string> {
-  const useOpenAI = !!openaiKey;
-  const url = useOpenAI
-    ? "https://api.openai.com/v1/chat/completions"
-    : LOVABLE_GATEWAY_URL;
-  const apiKey = useOpenAI ? openaiKey! : process.env.LOVABLE_API_KEY!;
-  const chosenModel =
-    model ?? (useOpenAI ? "gpt-4o-mini" : "google/gemini-2.5-flash");
+  // Priority: Kimi (Moonshot) > OpenAI > Lovable AI Gateway
+  const useKimi = !!kimiKey;
+  const useOpenAI = !useKimi && !!openaiKey;
+
+  let url: string;
+  let apiKey: string;
+  let chosenModel: string;
+
+  if (useKimi) {
+    url = "https://api.moonshot.ai/v1/chat/completions";
+    apiKey = kimiKey!;
+    chosenModel = model ?? "kimi-k2-0905-preview";
+  } else if (useOpenAI) {
+    url = "https://api.openai.com/v1/chat/completions";
+    apiKey = openaiKey!;
+    chosenModel = model ?? "gpt-4o-mini";
+  } else {
+    url = LOVABLE_GATEWAY_URL;
+    apiKey = process.env.LOVABLE_API_KEY!;
+    chosenModel = model ?? "google/gemini-2.5-flash";
+  }
 
   const body: Record<string, unknown> = {
     model: chosenModel,
@@ -67,6 +83,13 @@ export async function chatCompletion({
     choices?: { message?: { content?: string } }[];
   };
   return data.choices?.[0]?.message?.content ?? "";
+}
+
+export async function getUserKimiKey(
+  supabase: { from: (t: string) => any },
+  userId: string,
+): Promise<string | null> {
+  return getUserKey(supabase, userId, "kimi");
 }
 
 export async function getUserOpenAIKey(

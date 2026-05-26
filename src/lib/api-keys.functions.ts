@@ -3,7 +3,7 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { encryptSecret } from "./crypto.server";
 
-const ALLOWED_PROVIDERS = ["openai", "resend", "hunter", "serper", "brave"] as const;
+const ALLOWED_PROVIDERS = ["openai", "kimi", "resend", "hunter", "serper", "brave"] as const;
 
 export const saveUserApiKey = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
