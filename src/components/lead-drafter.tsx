@@ -24,17 +24,29 @@ type Lead = {
   linkedin_url?: string | null;
 };
 
+type ResearchOut = {
+  summary: string;
+  pains: string[];
+  opportunities: string[];
+  suggested_service: string;
+  why_this_service: string;
+  score: number;
+  hook: string;
+};
+
 export function LeadDrafter({ lead, open, onClose }: { lead: Lead | null; open: boolean; onClose: () => void }) {
   const draft = useServerFn(draftEmail);
   const subj = useServerFn(subjectLines);
   const research = useServerFn(researchLead);
   const send = useServerFn(sendEmail);
 
-  const [service, setService] = useState("AI automation, web/app development");
+  // Optional. Empty = let AI pick the best service from research.
+  const [service, setService] = useState("");
   const [subject, setSubject] = useState("");
   const [body, setBody] = useState("");
   const [subjects, setSubjects] = useState<string[]>([]);
-  const [researchOut, setResearchOut] = useState<{ summary: string; hook: string; score: number } | null>(null);
+  const [researchOut, setResearchOut] = useState<ResearchOut | null>(null);
+  const [pitchedService, setPitchedService] = useState<string>("");
   const [loading, setLoading] = useState<string | null>(null);
 
   if (!lead) return null;
@@ -59,22 +71,55 @@ export function LeadDrafter({ lead, open, onClose }: { lead: Lead | null; open: 
           </Card>
 
           <div className="space-y-1.5">
-            <Label>Your offer / service</Label>
-            <Input value={service} onChange={(e) => setService(e.target.value)} />
+            <Label>Your service (optional)</Label>
+            <Input
+              value={service}
+              onChange={(e) => setService(e.target.value)}
+              placeholder="Leave blank — AI will pick the best service for this lead from the research"
+            />
+            <p className="text-xs text-muted-foreground">
+              Empty = AI decides based on deep research. Fill it in to force a specific pitch (the email will redraft around it).
+            </p>
           </div>
 
           <div className="flex flex-wrap gap-2">
             <Button size="sm" variant="outline" disabled={!!loading} onClick={async () => {
-              const r = await run("research", () => research({ data: { lead: { contact: lead.contact, company: lead.company ?? undefined, title: lead.title ?? undefined, niche: lead.niche ?? undefined, linkedin_url: lead.linkedin_url ?? undefined } } }));
-              if (r) setResearchOut(r);
+              const r = await run("research", () => research({ data: {
+                lead: {
+                  contact: lead.contact,
+                  company: lead.company ?? undefined,
+                  title: lead.title ?? undefined,
+                  niche: lead.niche ?? undefined,
+                  linkedin_url: lead.linkedin_url ?? undefined,
+                },
+                sender: { services: service || undefined },
+              } }));
+              if (r) setResearchOut(r as ResearchOut);
             }}>
-              {loading === "research" ? <Loader2 className="size-4 animate-spin" /> : <Search className="size-4" />} Research
+              {loading === "research" ? <Loader2 className="size-4 animate-spin" /> : <Search className="size-4" />} Deep research
             </Button>
             <Button size="sm" disabled={!!loading} onClick={async () => {
-              const r = await run("draft", () => draft({ data: { lead: { contact: lead.contact, company: lead.company ?? undefined, title: lead.title ?? undefined, email: lead.email ?? undefined, niche: lead.niche ?? undefined, notes: lead.notes ?? undefined, status: lead.status ?? undefined }, service, research: researchOut?.summary } }));
-              if (r) { setSubject(r.subject); setBody(r.body); }
+              const r = await run("draft", () => draft({ data: {
+                lead: {
+                  contact: lead.contact,
+                  company: lead.company ?? undefined,
+                  title: lead.title ?? undefined,
+                  email: lead.email ?? undefined,
+                  niche: lead.niche ?? undefined,
+                  notes: lead.notes ?? undefined,
+                  status: lead.status ?? undefined,
+                },
+                service: service || undefined,
+                research: researchOut?.summary,
+                suggestedService: researchOut?.suggested_service,
+              } }));
+              if (r) {
+                setSubject(r.subject);
+                setBody(r.body);
+                setPitchedService(r.service_pitched ?? "");
+              }
             }}>
-              {loading === "draft" ? <Loader2 className="size-4 animate-spin" /> : <Sparkles className="size-4" />} Draft email
+              {loading === "draft" ? <Loader2 className="size-4 animate-spin" /> : <Sparkles className="size-4" />} {service ? "Redraft with my service" : "Draft email"}
             </Button>
             <Button size="sm" variant="outline" disabled={!!loading || !body} onClick={async () => {
               const r = await run("subj", () => subj({ data: { body, lead: { contact: lead.contact, company: lead.company ?? undefined } } }));
@@ -85,9 +130,33 @@ export function LeadDrafter({ lead, open, onClose }: { lead: Lead | null; open: 
           </div>
 
           {researchOut && (
-            <Card className="p-3 space-y-1 text-sm">
-              <div className="flex items-center gap-2"><Badge>Score {researchOut.score}/10</Badge></div>
+            <Card className="p-3 space-y-2 text-sm">
+              <div className="flex flex-wrap items-center gap-2">
+                <Badge>Score {researchOut.score}/10</Badge>
+                {researchOut.suggested_service && (
+                  <Badge variant="secondary">AI pick: {researchOut.suggested_service}</Badge>
+                )}
+              </div>
               <p>{researchOut.summary}</p>
+              {researchOut.why_this_service && (
+                <p className="text-muted-foreground"><strong>Why this service:</strong> {researchOut.why_this_service}</p>
+              )}
+              {researchOut.pains.length > 0 && (
+                <div>
+                  <div className="text-xs font-medium mt-1">Likely pains</div>
+                  <ul className="list-disc pl-5 text-muted-foreground">
+                    {researchOut.pains.map((p, i) => <li key={i}>{p}</li>)}
+                  </ul>
+                </div>
+              )}
+              {researchOut.opportunities.length > 0 && (
+                <div>
+                  <div className="text-xs font-medium mt-1">Opportunities</div>
+                  <ul className="list-disc pl-5 text-muted-foreground">
+                    {researchOut.opportunities.map((o, i) => <li key={i}>{o}</li>)}
+                  </ul>
+                </div>
+              )}
               {researchOut.hook && <p className="text-muted-foreground"><strong>Hook:</strong> {researchOut.hook}</p>}
             </Card>
           )}
@@ -101,6 +170,10 @@ export function LeadDrafter({ lead, open, onClose }: { lead: Lead | null; open: 
                 ))}
               </div>
             </div>
+          )}
+
+          {pitchedService && (
+            <p className="text-xs text-muted-foreground">Pitched in this draft: <strong>{pitchedService}</strong></p>
           )}
 
           <div className="space-y-1.5">
