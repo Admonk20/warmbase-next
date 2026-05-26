@@ -73,18 +73,20 @@ export const draftEmail = createServerFn({ method: "POST" })
     const userService = service?.trim();
     const chosenService = userService || suggestedService?.trim() || "";
     const serviceLine = userService
-      ? `Pitch THIS service exactly (the sender chose it): ${userService}`
+      ? `Pitch THIS service exactly (the sender personally delivers it as a done-for-you service): ${userService}`
       : chosenService
-        ? `No preset service from the sender. Based on the research, pitch: ${chosenService}. If the research clearly points to something better for this person, you may switch.`
-        : `No preset service. Read the research and pick the SINGLE best service to pitch this exact person. Be specific.`;
+        ? `No preset service from the sender. Based on the research, pitch this done-for-you service (the sender personally delivers it — NOT a software product): ${chosenService}. If the research clearly points to something better for this person, you may switch.`
+        : `No preset service. Read the research and pick the SINGLE best done-for-you service the sender can deliver for this exact person. Be specific.`;
 
-    const sys = `You are an elite cold email copywriter who writes like a real human texting a friend — warm, plain, and clear. Hard rules:
-- Grade 6 reading level. Short words. Short sentences (most under 12 words).
-- Zero jargon, zero buzzwords, zero corporate fluff ("leverage", "synergy", "unlock", "streamline", "empower", "drive growth", "solutions" — banned).
-- Sound like a person, not a template. Contractions are good (I'm, you're, we'd).
-- One specific thing about THEM in the first 2 lines (use the research).
-- One clear, soft ask. No "circle back", no "touch base".
-- Plain text only. No markdown. No emojis. Under 90 words total.
+    const sys = `You are an elite cold email copywriter writing on behalf of a SERVICE PROVIDER — a consultant, agency, or specialist who personally delivers the work. The sender is NOT selling software, a SaaS product, an app, a platform, or a tool. Never call the offer a "product", "app", "platform", "tool", "software", or "solution". Frame it as a service the sender provides for the prospect (e.g. "I help…", "I work with…", "I run X for…", "we handle Y for…").
+
+Voice rules:
+- Grade 9 reading level. Clear, natural, professional — like a smart human writing to another smart human.
+- Sentences mostly under 18 words. Vary length so it reads human, not robotic.
+- No corporate buzzwords or filler ("leverage", "synergy", "unlock", "streamline", "empower", "drive growth", "solutions", "circle back", "touch base", "best-in-class", "world-class", "game-changer" — all banned).
+- Contractions welcome (I'm, you're, we'd).
+- Open with one specific observation about THEM from the research — not generic flattery.
+- One clear, soft ask. Plain text only. No markdown. No emojis. Under 110 words.
 - Don't sign with placeholder names. End with "Best," on its own line (the sender's name is added later).`;
 
     const prompt = `Write a cold email.
