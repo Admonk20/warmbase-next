@@ -120,6 +120,7 @@ Voice rules:
 - Don't sign with placeholder names. End with "Best," on its own line (the sender's name is added later).`;
 
     const prompt = `Write a cold email.
+${customInstructions ? `\nUSER CUSTOM INSTRUCTIONS (highest priority — follow these unless they conflict with the voice rules above)\n${customInstructions}\n` : ""}
 
 LEAD
 ${lead.contact ?? "?"} — ${lead.title ?? "?"} at ${lead.company ?? "?"} (${lead.niche ?? "?"})
