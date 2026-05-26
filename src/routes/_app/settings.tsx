@@ -16,6 +16,7 @@ import { SmtpSettingsCard } from "@/components/smtp-settings";
 import { SuppressionsCard } from "@/components/suppressions-card";
 import { SendPreferencesCard } from "@/components/send-preferences-card";
 import { InboxHealthCard } from "@/components/inbox-health-card";
+import { AiInstructionsCard } from "@/components/ai-instructions-card";
 import { saveUserApiKey, deleteUserApiKey } from "@/lib/api-keys.functions";
 
 
