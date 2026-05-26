@@ -83,43 +83,61 @@ export function LeadDrafter({ lead, open, onClose }: { lead: Lead | null; open: 
           </div>
 
           <div className="flex flex-wrap gap-2">
-            <Button size="sm" variant="outline" disabled={!!loading} onClick={async () => {
-              const r = await run("research", () => research({ data: {
-                lead: {
-                  contact: lead.contact,
-                  company: lead.company ?? undefined,
-                  title: lead.title ?? undefined,
-                  niche: lead.niche ?? undefined,
-                  linkedin_url: lead.linkedin_url ?? undefined,
-                },
-                sender: { services: service || undefined },
-              } }));
-              if (r) setResearchOut(r as ResearchOut);
-            }}>
-              {loading === "research" ? <Loader2 className="size-4 animate-spin" /> : <Search className="size-4" />} Deep research
-            </Button>
             <Button size="sm" disabled={!!loading} onClick={async () => {
-              const r = await run("draft", () => draft({ data: {
-                lead: {
-                  contact: lead.contact,
-                  company: lead.company ?? undefined,
-                  title: lead.title ?? undefined,
-                  email: lead.email ?? undefined,
-                  niche: lead.niche ?? undefined,
-                  notes: lead.notes ?? undefined,
-                  status: lead.status ?? undefined,
-                },
-                service: service || undefined,
-                research: researchOut?.summary,
-                suggestedService: researchOut?.suggested_service,
-              } }));
-              if (r) {
-                setSubject(r.subject);
-                setBody(r.body);
-                setPitchedService(r.service_pitched ?? "");
+              setLoading("research");
+              try {
+                // 1. Always do deep research first
+                const r = await research({ data: {
+                  lead: {
+                    contact: lead.contact,
+                    company: lead.company ?? undefined,
+                    title: lead.title ?? undefined,
+                    niche: lead.niche ?? undefined,
+                    linkedin_url: lead.linkedin_url ?? undefined,
+                    email: lead.email ?? undefined,
+                  },
+                  sender: { services: service || undefined },
+                } });
+                if (!r) return;
+                const ro = r as ResearchOut;
+                setResearchOut(ro);
+
+                // 2. Immediately draft, passing the FULL research object
+                setLoading("draft");
+                const d = await draft({ data: {
+                  lead: {
+                    contact: lead.contact,
+                    company: lead.company ?? undefined,
+                    title: lead.title ?? undefined,
+                    email: lead.email ?? undefined,
+                    niche: lead.niche ?? undefined,
+                    notes: lead.notes ?? undefined,
+                    status: lead.status ?? undefined,
+                  },
+                  service: service || undefined,
+                  research: {
+                    summary: ro.summary,
+                    pains: ro.pains,
+                    opportunities: ro.opportunities,
+                    why_this_service: ro.why_this_service,
+                    hook: ro.hook,
+                  },
+                  suggestedService: ro.suggested_service,
+                } });
+                if (d) {
+                  setSubject(d.subject);
+                  setBody(d.body);
+                  setPitchedService(d.service_pitched ?? "");
+                }
+              } catch (e: any) {
+                toast.error(e?.message ?? "Failed");
+              } finally {
+                setLoading(null);
               }
             }}>
-              {loading === "draft" ? <Loader2 className="size-4 animate-spin" /> : <Sparkles className="size-4" />} {service ? "Redraft with my service" : "Draft email"}
+              {loading === "research" || loading === "draft"
+                ? <><Loader2 className="size-4 animate-spin" /> {loading === "research" ? "Researching…" : "Drafting…"}</>
+                : <><Sparkles className="size-4" /> {service ? "Redraft with my service" : "Research & draft email"}</>}
             </Button>
             <Button size="sm" variant="outline" disabled={!!loading || !body} onClick={async () => {
               const r = await run("subj", () => subj({ data: { body, lead: { contact: lead.contact, company: lead.company ?? undefined } } }));
@@ -128,6 +146,7 @@ export function LeadDrafter({ lead, open, onClose }: { lead: Lead | null; open: 
               {loading === "subj" ? <Loader2 className="size-4 animate-spin" /> : <Wand2 className="size-4" />} Subject ideas
             </Button>
           </div>
+
 
           {researchOut && (
             <Card className="p-3 space-y-2 text-sm">
