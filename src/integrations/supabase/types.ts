@@ -399,6 +399,7 @@ export type Database = {
       }
       profiles: {
         Row: {
+          ai_email_instructions: string | null
           avatar_url: string | null
           company: string | null
           created_at: string
@@ -408,6 +409,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          ai_email_instructions?: string | null
           avatar_url?: string | null
           company?: string | null
           created_at?: string
@@ -417,6 +419,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          ai_email_instructions?: string | null
           avatar_url?: string | null
           company?: string | null
           created_at?: string
