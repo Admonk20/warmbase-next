@@ -51,8 +51,10 @@ export const draftEmail = createServerFn({ method: "POST" })
         notes: z.string().optional(),
         status: z.string().optional(),
       }),
-      service: z.string().min(1).max(400),
+      // Optional now — if blank, the AI picks the best service from research.
+      service: z.string().max(400).optional(),
       research: z.string().max(4000).optional(),
+      suggestedService: z.string().max(400).optional(),
       sender: z
         .object({
           yourName: z.string().max(120).optional(),
@@ -63,41 +65,68 @@ export const draftEmail = createServerFn({ method: "POST" })
     }).parse,
   )
   .handler(async ({ data, context }) => {
-    const { lead, service, research, sender } = data;
+    const { lead, service, research, suggestedService, sender } = data;
     const stage = (lead.status as keyof typeof STAGE_CONTEXT) ?? "new";
     const sx = STAGE_CONTEXT[stage] ?? STAGE_CONTEXT.new;
     const firstName = (lead.contact ?? "there").split(" ")[0];
 
-    const sys = `You are an elite cold email copywriter. Write a personalized email under 100 words. Plain text only, no markdown.`;
+    const userService = service?.trim();
+    const chosenService = userService || suggestedService?.trim() || "";
+    const serviceLine = userService
+      ? `Pitch THIS service exactly (the sender chose it): ${userService}`
+      : chosenService
+        ? `No preset service from the sender. Based on the research, pitch: ${chosenService}. If the research clearly points to something better for this person, you may switch.`
+        : `No preset service. Read the research and pick the SINGLE best service to pitch this exact person. Be specific.`;
+
+    const sys = `You are an elite cold email copywriter who writes like a real human texting a friend — warm, plain, and clear. Hard rules:
+- Grade 6 reading level. Short words. Short sentences (most under 12 words).
+- Zero jargon, zero buzzwords, zero corporate fluff ("leverage", "synergy", "unlock", "streamline", "empower", "drive growth", "solutions" — banned).
+- Sound like a person, not a template. Contractions are good (I'm, you're, we'd).
+- One specific thing about THEM in the first 2 lines (use the research).
+- One clear, soft ask. No "circle back", no "touch base".
+- Plain text only. No markdown. No emojis. Under 90 words total.
+- Don't sign with placeholder names. End with "Best," on its own line (the sender's name is added later).`;
+
     const prompt = `Write a cold email.
-Lead: ${lead.contact ?? "?"} — ${lead.title ?? "?"} at ${lead.company ?? "?"} (${lead.niche ?? "?"})
+
+LEAD
+${lead.contact ?? "?"} — ${lead.title ?? "?"} at ${lead.company ?? "?"} (${lead.niche ?? "?"})
 Notes: ${lead.notes ?? "—"}
-Research: ${research ?? "—"}
 
-Sender: ${sender?.yourName ?? "Your Name"}${sender?.yourCompany ? ", " + sender.yourCompany : ""}${sender?.yourTitle ? " (" + sender.yourTitle + ")" : ""}
-Offer: ${service}
+RESEARCH (use this to be specific, not generic)
+${research ?? "—"}
 
-Stage: ${stage}
+SENDER
+${sender?.yourName ?? "(unsigned)"}${sender?.yourCompany ? ", " + sender.yourCompany : ""}${sender?.yourTitle ? " (" + sender.yourTitle + ")" : ""}
+
+SERVICE TO PITCH
+${serviceLine}
+
+STAGE: ${stage}
 Goal: ${sx.goal}
 Tone: ${sx.tone}
 CTA: ${sx.cta}
 
 Address them as ${firstName}.
 
-Return JSON: { "subject": "...", "body": "..." }`;
+Return JSON: { "subject": "short, lowercase-ish, under 50 chars, no clickbait", "body": "the email", "service_pitched": "the exact service you ended up pitching" }`;
 
     const openaiKey = await getUserOpenAIKey(context.supabase, context.userId);
     const text = await chatCompletion({
       messages: [{ role: "system", content: sys }, { role: "user", content: prompt }],
       openaiKey,
       json: true,
-      temperature: 0.8,
+      temperature: 0.85,
     });
     try {
       const parsed = JSON.parse(text);
-      return { subject: String(parsed.subject ?? ""), body: String(parsed.body ?? "") };
+      return {
+        subject: String(parsed.subject ?? ""),
+        body: String(parsed.body ?? ""),
+        service_pitched: String(parsed.service_pitched ?? chosenService),
+      };
     } catch {
-      return { subject: "", body: text };
+      return { subject: "", body: text, service_pitched: chosenService };
     }
   });
 
