@@ -110,6 +110,9 @@ function Settings() {
 
       <InboxHealthCard />
 
+      <AiInstructionsCard />
+
+
 
 
       <Card>
