@@ -25,6 +25,7 @@ export const Route = createFileRoute("/_app/settings")({ component: Settings });
 
 const PROVIDERS = [
   { id: "openai", label: "OpenAI", desc: "Optional. Defaults to Lovable AI Gateway (no key required)." },
+  { id: "kimi", label: "Kimi (Moonshot)", desc: "Optional. Uses kimi-k2-0905-preview. Takes priority over OpenAI if set. platform.moonshot.ai" },
   { id: "resend", label: "Resend", desc: "Optional fallback if you don't configure SMTP. resend.com/api-keys" },
   { id: "hunter", label: "Hunter.io", desc: "Optional. Email finder + verifier. hunter.io/api" },
   { id: "serper", label: "Serper.dev", desc: "Optional. Google search for Lead Finder. serper.dev" },
