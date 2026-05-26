@@ -79,6 +79,13 @@ export const draftEmail = createServerFn({ method: "POST" })
     const sx = STAGE_CONTEXT[stage] ?? STAGE_CONTEXT.new;
     const firstName = (lead.contact ?? "there").split(" ")[0];
 
+    const { data: prof } = await context.supabase
+      .from("profiles")
+      .select("ai_email_instructions")
+      .eq("id", context.userId)
+      .maybeSingle();
+    const customInstructions = ((prof as any)?.ai_email_instructions ?? "").trim();
+
     const userService = service?.trim();
     const chosenService = userService || suggestedService?.trim() || "";
     const serviceLine = userService
@@ -113,6 +120,7 @@ Voice rules:
 - Don't sign with placeholder names. End with "Best," on its own line (the sender's name is added later).`;
 
     const prompt = `Write a cold email.
+${customInstructions ? `\nUSER CUSTOM INSTRUCTIONS (highest priority — follow these unless they conflict with the voice rules above)\n${customInstructions}\n` : ""}
 
 LEAD
 ${lead.contact ?? "?"} — ${lead.title ?? "?"} at ${lead.company ?? "?"} (${lead.niche ?? "?"})
