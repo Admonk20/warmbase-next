@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { Loader2, Sparkles, Send, Search, Wand2 } from "lucide-react";
+import { Loader2, Sparkles, Send, Wand2 } from "lucide-react";
 import { draftEmail, subjectLines, sendEmail } from "@/lib/email.functions";
 import { researchLead } from "@/lib/research.functions";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
