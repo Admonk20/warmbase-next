@@ -24,26 +24,62 @@ export const researchLead = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     const { lead, sender } = data;
-    const sys = `You are a B2B sales researcher. Return JSON: {"summary": "3-4 sentences about company + person", "suggested_service": "best matching service from sender's offer", "score": 1-10, "hook": "one specific personalization angle"}.`;
-    const prompt = `Lead: ${lead.contact ?? "?"} — ${lead.title ?? "?"} at ${lead.company ?? "?"} (${lead.niche ?? "?"})${lead.linkedin_url ? ` LinkedIn: ${lead.linkedin_url}` : ""}\n\nSender services: ${sender?.services ?? "AI automation, web/app development"}\nSender: ${sender?.yourName ?? "Sales rep"} at ${sender?.yourCompany ?? ""}\n\nResearch them and recommend the best angle. Use general industry knowledge.`;
+    const sys = `You are a senior B2B sales researcher doing DEEP discovery on a single prospect. Be thorough, specific, and grounded — no fluff, no generic flattery. Infer everything you can from the title, company name, industry, and any signals. If the sender did NOT specify a service, YOU must determine the single best service to pitch this person based on their likely pains, role, and industry maturity.
+
+Return JSON with this exact shape:
+{
+  "summary": "6-8 sentences. Cover: what the company likely does, stage/size signals, what this person owns in their role, 2-3 specific pains they probably face right now, and one industry trend hitting them.",
+  "pains": ["specific pain 1", "specific pain 2", "specific pain 3"],
+  "opportunities": ["concrete opportunity 1", "concrete opportunity 2"],
+  "suggested_service": "The single best service to pitch — be specific (e.g. 'AI-powered lead qualification chatbot' not 'AI automation'). If sender provided services, pick the strongest fit from their list. If not, recommend the highest-leverage service for this exact person.",
+  "why_this_service": "1-2 sentences explaining WHY this service fits this person right now.",
+  "score": 1-10,
+  "hook": "One specific, human personalization angle a 6th grader could read out loud — no jargon, no buzzwords."
+}`;
+    const senderServices = sender?.services?.trim();
+    const prompt = `PROSPECT
+Name: ${lead.contact ?? "?"}
+Title: ${lead.title ?? "?"}
+Company: ${lead.company ?? "?"}
+Industry/Niche: ${lead.niche ?? "?"}
+LinkedIn: ${lead.linkedin_url ?? "—"}
+Email: ${lead.email ?? "—"}
+
+SENDER
+${sender?.yourName ? `Name: ${sender.yourName}` : ""}
+${sender?.yourCompany ? `Company: ${sender.yourCompany}` : ""}
+Services on offer: ${senderServices ? senderServices : "NOT SPECIFIED — you decide the best single service to pitch this person."}
+
+Do the deep research now. Be specific to THIS person and company, not generic.`;
     const openaiKey = await getUserOpenAIKey(context.supabase, context.userId);
     const out = await chatCompletion({
       messages: [{ role: "system", content: sys }, { role: "user", content: prompt }],
       openaiKey,
       json: true,
-      temperature: 0.5,
+      temperature: 0.4,
     });
-    type ResearchResult = { summary: string; suggested_service: string; score: number; hook: string };
+    type ResearchResult = {
+      summary: string;
+      pains: string[];
+      opportunities: string[];
+      suggested_service: string;
+      why_this_service: string;
+      score: number;
+      hook: string;
+    };
     try {
       const parsed = JSON.parse(out) as Partial<ResearchResult>;
       return {
         summary: String(parsed.summary ?? ""),
+        pains: Array.isArray(parsed.pains) ? parsed.pains.map(String).slice(0, 5) : [],
+        opportunities: Array.isArray(parsed.opportunities) ? parsed.opportunities.map(String).slice(0, 5) : [],
         suggested_service: String(parsed.suggested_service ?? ""),
+        why_this_service: String(parsed.why_this_service ?? ""),
         score: Number(parsed.score ?? 5),
         hook: String(parsed.hook ?? ""),
       } satisfies ResearchResult;
     } catch {
-      return { summary: out, suggested_service: "", score: 5, hook: "" };
+      return { summary: out, pains: [], opportunities: [], suggested_service: "", why_this_service: "", score: 5, hook: "" };
     }
   });
 
