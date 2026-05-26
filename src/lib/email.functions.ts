@@ -38,6 +38,14 @@ const STAGE_CONTEXT: Record<string, { goal: string; tone: string; cta: string }>
   },
 };
 
+const researchObjectSchema = z.object({
+  summary: z.string().optional(),
+  pains: z.array(z.string()).optional(),
+  opportunities: z.array(z.string()).optional(),
+  why_this_service: z.string().optional(),
+  hook: z.string().optional(),
+});
+
 export const draftEmail = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator(
@@ -53,7 +61,8 @@ export const draftEmail = createServerFn({ method: "POST" })
       }),
       // Optional now — if blank, the AI picks the best service from research.
       service: z.string().max(400).optional(),
-      research: z.string().max(4000).optional(),
+      // Accept either the rich research object OR a plain summary string (back-compat).
+      research: z.union([researchObjectSchema, z.string().max(4000)]).optional(),
       suggestedService: z.string().max(400).optional(),
       sender: z
         .object({
@@ -78,6 +87,20 @@ export const draftEmail = createServerFn({ method: "POST" })
         ? `No preset service from the sender. Based on the research, pitch this done-for-you service (the sender personally delivers it — NOT a software product): ${chosenService}. If the research clearly points to something better for this person, you may switch.`
         : `No preset service. Read the research and pick the SINGLE best done-for-you service the sender can deliver for this exact person. Be specific.`;
 
+    // Format the research block — use the rich object when available, fall back to string.
+    let researchBlock = "—";
+    if (typeof research === "string") {
+      researchBlock = research;
+    } else if (research && typeof research === "object") {
+      const parts: string[] = [];
+      if (research.summary) parts.push(`Summary: ${research.summary}`);
+      if (research.pains?.length) parts.push(`Specific pains they likely face right now:\n- ${research.pains.join("\n- ")}`);
+      if (research.opportunities?.length) parts.push(`Concrete opportunities:\n- ${research.opportunities.join("\n- ")}`);
+      if (research.why_this_service) parts.push(`Why this service fits them: ${research.why_this_service}`);
+      if (research.hook) parts.push(`Personalization hook to consider for the opener: ${research.hook}`);
+      if (parts.length) researchBlock = parts.join("\n\n");
+    }
+
     const sys = `You are an elite cold email copywriter writing on behalf of a SERVICE PROVIDER — a consultant, agency, or specialist who personally delivers the work. The sender is NOT selling software, a SaaS product, an app, a platform, or a tool. Never call the offer a "product", "app", "platform", "tool", "software", or "solution". Frame it as a service the sender provides for the prospect (e.g. "I help…", "I work with…", "I run X for…", "we handle Y for…").
 
 Voice rules:
@@ -85,7 +108,7 @@ Voice rules:
 - Sentences mostly under 18 words. Vary length so it reads human, not robotic.
 - No corporate buzzwords or filler ("leverage", "synergy", "unlock", "streamline", "empower", "drive growth", "solutions", "circle back", "touch base", "best-in-class", "world-class", "game-changer" — all banned).
 - Contractions welcome (I'm, you're, we'd).
-- Open with one specific observation about THEM from the research — not generic flattery.
+- Open with one specific observation about THEM from the research — pull from the pains, opportunities, or hook. Never generic flattery.
 - One clear, soft ask. Plain text only. No markdown. No emojis. Under 110 words.
 - Don't sign with placeholder names. End with "Best," on its own line (the sender's name is added later).`;
 
@@ -95,8 +118,8 @@ LEAD
 ${lead.contact ?? "?"} — ${lead.title ?? "?"} at ${lead.company ?? "?"} (${lead.niche ?? "?"})
 Notes: ${lead.notes ?? "—"}
 
-RESEARCH (use this to be specific, not generic)
-${research ?? "—"}
+RESEARCH (ground the email in these specifics — do not invent details that aren't here)
+${researchBlock}
 
 SENDER
 ${sender?.yourName ?? "(unsigned)"}${sender?.yourCompany ? ", " + sender.yourCompany : ""}${sender?.yourTitle ? " (" + sender.yourTitle + ")" : ""}
@@ -131,6 +154,7 @@ Return JSON: { "subject": "short, lowercase-ish, under 50 chars, no clickbait", 
       return { subject: "", body: text, service_pitched: chosenService };
     }
   });
+
 
 export const subjectLines = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
