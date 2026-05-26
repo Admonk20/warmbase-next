@@ -79,6 +79,13 @@ export const draftEmail = createServerFn({ method: "POST" })
     const sx = STAGE_CONTEXT[stage] ?? STAGE_CONTEXT.new;
     const firstName = (lead.contact ?? "there").split(" ")[0];
 
+    const { data: prof } = await context.supabase
+      .from("profiles")
+      .select("ai_email_instructions")
+      .eq("id", context.userId)
+      .maybeSingle();
+    const customInstructions = ((prof as any)?.ai_email_instructions ?? "").trim();
+
     const userService = service?.trim();
     const chosenService = userService || suggestedService?.trim() || "";
     const serviceLine = userService
