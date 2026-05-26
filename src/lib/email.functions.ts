@@ -1,7 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { chatCompletion, getUserOpenAIKey, getUserKey } from "./ai.server";
+import { chatCompletion, getUserOpenAIKey, getUserKimiKey, getUserKey } from "./ai.server";
 import {
   getAppBaseUrl,
   htmlFromText,
@@ -144,10 +144,11 @@ Address them as ${firstName}.
 
 Return JSON: { "subject": "short, lowercase-ish, under 50 chars, no clickbait", "body": "the email", "service_pitched": "the exact service you ended up pitching" }`;
 
-    const openaiKey = await getUserOpenAIKey(context.supabase, context.userId);
+    const [openaiKey, kimiKey] = await Promise.all([getUserOpenAIKey(context.supabase, context.userId), getUserKimiKey(context.supabase, context.userId)]);
     const text = await chatCompletion({
       messages: [{ role: "system", content: sys }, { role: "user", content: prompt }],
       openaiKey,
+      kimiKey,
       json: true,
       temperature: 0.85,
     });
@@ -176,10 +177,11 @@ export const subjectLines = createServerFn({ method: "POST" })
     const firstName = (data.lead?.contact ?? "").split(" ")[0];
     const sys = `You are an expert cold email copywriter. Return JSON: {"subjects": ["...","...","...","...","..."]}. Each subject under 50 chars, punchy, no clickbait, no emojis.`;
     const prompt = `Email body:\n${data.body}\n\nGenerate 5 alternative subject lines. Lead: ${firstName} at ${data.lead?.company ?? ""}.`;
-    const openaiKey = await getUserOpenAIKey(context.supabase, context.userId);
+    const [openaiKey, kimiKey] = await Promise.all([getUserOpenAIKey(context.supabase, context.userId), getUserKimiKey(context.supabase, context.userId)]);
     const out = await chatCompletion({
       messages: [{ role: "system", content: sys }, { role: "user", content: prompt }],
       openaiKey,
+      kimiKey,
       json: true,
       temperature: 0.9,
     });
@@ -224,10 +226,11 @@ export const draftReply = createServerFn({ method: "POST" })
     const strategy = OBJECTION_STRATEGIES[obj];
     const sys = `You are an elite sales reply writer. Plain text. Under 80 words. No markdown.`;
     const prompt = `Detected objection: ${obj}\nStrategy: ${strategy}\n\nLead: ${data.lead?.contact ?? ""} at ${data.lead?.company ?? ""}\nTheir email:\n${data.inboundEmail}\n\nFrom: ${data.yourName ?? "You"}\n\nWrite the reply.`;
-    const openaiKey = await getUserOpenAIKey(context.supabase, context.userId);
+    const [openaiKey, kimiKey] = await Promise.all([getUserOpenAIKey(context.supabase, context.userId), getUserKimiKey(context.supabase, context.userId)]);
     const body = await chatCompletion({
       messages: [{ role: "system", content: sys }, { role: "user", content: prompt }],
       openaiKey,
+      kimiKey,
       temperature: 0.7,
     });
     return { body, objection: obj };
@@ -253,10 +256,11 @@ export const personalizeBatch = createServerFn({ method: "POST" })
     ).join("\n");
     const sys = `Return JSON: {"openers": [{"id":"...","opener":"..."}, ...]}. Each opener is one sentence, specific, no generic flattery.`;
     const prompt = `Offer: ${data.offer ?? "B2B services"}\n\nLeads:\n${leadList}\n\nWrite one personalized opening line for each lead.`;
-    const openaiKey = await getUserOpenAIKey(context.supabase, context.userId);
+    const [openaiKey, kimiKey] = await Promise.all([getUserOpenAIKey(context.supabase, context.userId), getUserKimiKey(context.supabase, context.userId)]);
     const out = await chatCompletion({
       messages: [{ role: "system", content: sys }, { role: "user", content: prompt }],
       openaiKey,
+      kimiKey,
       json: true,
     });
     try {

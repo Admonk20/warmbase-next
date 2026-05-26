@@ -1,7 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { chatCompletion, getUserOpenAIKey } from "./ai.server";
+import { chatCompletion, getUserOpenAIKey, getUserKimiKey } from "./ai.server";
 import {
   buildQueries,
   firecrawlSearch,
@@ -82,7 +82,7 @@ export const runSourcingStep = createServerFn({ method: "POST" })
         .eq("id", run.id);
 
       // Extract via AI (one batched call to keep latency + cost down)
-      const openaiKey = await getUserOpenAIKey(context.supabase, context.userId);
+      const [openaiKey, kimiKey] = await Promise.all([getUserOpenAIKey(context.supabase, context.userId), getUserKimiKey(context.supabase, context.userId)]);
       const sys = `You extract sales leads from web search results. Return JSON:
 {"people":[{"contact":"Full Name","title":"Job Title","company":"Company","email":"email or empty","linkedin_url":"url or empty","niche":"industry","summary":"why a good fit (1 sentence)","score":1-10,"source_url":"the url"}]}
 Only include items where you can identify at least a person OR a company. score = fit for our offer (1-10). Skip pure marketing pages.`;
@@ -110,6 +110,7 @@ ${deduped
             { role: "user", content: userMsg },
           ],
           openaiKey,
+          kimiKey,
           json: true,
           temperature: 0.3,
         });

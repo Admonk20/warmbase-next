@@ -1,7 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { chatCompletion, getUserOpenAIKey } from "./ai.server";
+import { chatCompletion, getUserOpenAIKey, getUserKimiKey } from "./ai.server";
 
 const SYSTEM_PROMPT = `You are the built-in assistant for ColdBase Pro, a cold email pipeline tool.
 
@@ -42,13 +42,14 @@ export const chat = createServerFn({ method: "POST" })
       contextBlock = `\n\nUSER'S PIPELINE SNAPSHOT:\nLeads by status: ${JSON.stringify(byStatus)}\nTotal pipeline value: $${pipeline}\nCampaigns: ${camps.length} (${totalSent} emails sent, ${totalReply} replies)\nRecent events: ${evts.length}\n`;
     }
 
-    const openaiKey = await getUserOpenAIKey(context.supabase, context.userId);
+    const [openaiKey, kimiKey] = await Promise.all([getUserOpenAIKey(context.supabase, context.userId), getUserKimiKey(context.supabase, context.userId)]);
     const reply = await chatCompletion({
       messages: [
         { role: "system", content: SYSTEM_PROMPT + contextBlock },
         ...data.messages,
       ],
       openaiKey,
+      kimiKey,
       temperature: 0.6,
     });
     return { reply };

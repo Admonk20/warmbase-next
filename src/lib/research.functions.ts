@@ -1,7 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { chatCompletion, getUserOpenAIKey, getUserKey } from "./ai.server";
+import { chatCompletion, getUserOpenAIKey, getUserKimiKey, getUserKey } from "./ai.server";
 
 export const researchLead = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -55,10 +55,11 @@ ${sender?.yourCompany ? `Company: ${sender.yourCompany}` : ""}
 Services on offer: ${senderServices ? senderServices : "NOT SPECIFIED — you decide the best single service to pitch this person."}
 
 Do the deep research now. Be specific to THIS person and company, not generic.`;
-    const openaiKey = await getUserOpenAIKey(context.supabase, context.userId);
+    const [openaiKey, kimiKey] = await Promise.all([getUserOpenAIKey(context.supabase, context.userId), getUserKimiKey(context.supabase, context.userId)]);
     const out = await chatCompletion({
       messages: [{ role: "system", content: sys }, { role: "user", content: prompt }],
       openaiKey,
+      kimiKey,
       json: true,
       temperature: 0.4,
     });
@@ -215,10 +216,11 @@ export const cleanLeads = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const sys = `You are a CRM data cleaner. Fix names (proper case), normalize titles (CEO, Founder, VP Sales…), clean company names (drop Inc/LLC if redundant), dedupe by person+company, drop junk entries, flag low-confidence. Return JSON: {"leads": [{...}], "removed": n, "notes": "..."}.`;
     const prompt = `Clean these leads:\n${JSON.stringify(data.leads).slice(0, 10000)}`;
-    const openaiKey = await getUserOpenAIKey(context.supabase, context.userId);
+    const [openaiKey, kimiKey] = await Promise.all([getUserOpenAIKey(context.supabase, context.userId), getUserKimiKey(context.supabase, context.userId)]);
     const out = await chatCompletion({
       messages: [{ role: "system", content: sys }, { role: "user", content: prompt }],
       openaiKey,
+      kimiKey,
       json: true,
       temperature: 0.2,
     });
