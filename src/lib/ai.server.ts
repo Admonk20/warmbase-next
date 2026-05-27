@@ -45,8 +45,8 @@ export async function chatCompletion({
   if (useKimi) {
     url = "https://api.moonshot.ai/v1/chat/completions";
     apiKey = kimiKey!;
-    chosenModel = model ?? "kimi-k2-turbo-preview";
-    if (chosenModel === "kimi-k2.6") temperature = 1;
+    chosenModel = model ?? "kimi-k2.5";
+    if (chosenModel === "kimi-k2.6" || chosenModel === "kimi-k2.5") temperature = 1;
   } else if (useOpenAI) {
     url = "https://api.openai.com/v1/chat/completions";
     apiKey = openaiKey!;
