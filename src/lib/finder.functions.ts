@@ -34,7 +34,7 @@ export const findEmailCandidates = createServerFn({ method: "POST" })
     domain: z.string().min(3).max(255),
   }).parse)
   .handler(async ({ data }) => {
-    const parts = data.fullName.trim().toLowerCase().replace(/[^a-z\s\-]/g, "").split(/\s+/);
+    const parts = data.fullName.trim().toLowerCase().replace(/[^a-z\s-]/g, "").split(/\s+/);
     const first = parts[0];
     const last = parts.length > 1 ? parts[parts.length - 1] : "";
     const domain = data.domain.replace(/^https?:\/\//, "").replace(/\/.*$/, "").toLowerCase();

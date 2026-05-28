@@ -22,12 +22,14 @@ import { Route as AppLeadsRouteImport } from './routes/_app/leads'
 import { Route as AppDeliverabilityRouteImport } from './routes/_app/deliverability'
 import { Route as AppDashboardRouteImport } from './routes/_app/dashboard'
 import { Route as AppCampaignsRouteImport } from './routes/_app/campaigns'
+import { Route as AppAutomationRouteImport } from './routes/_app/automation'
 import { Route as ApiPublicUnsubscribeRouteImport } from './routes/api/public/unsubscribe'
 import { Route as ApiPublicTrackOpenDotgifRouteImport } from './routes/api/public/track/open[.]gif'
 import { Route as ApiPublicTrackClickRouteImport } from './routes/api/public/track/click'
 import { Route as ApiPublicTTokenRouteImport } from './routes/api/public/t.$token'
 import { Route as ApiPublicHooksEmailEventsRouteImport } from './routes/api/public/hooks/email-events'
 import { Route as ApiPublicCronImapPollRouteImport } from './routes/api/public/cron/imap-poll'
+import { Route as ApiPublicCronAutonomousRouteImport } from './routes/api/public/cron/autonomous'
 
 const AuthRoute = AuthRouteImport.update({
   id: '/auth',
@@ -93,6 +95,11 @@ const AppCampaignsRoute = AppCampaignsRouteImport.update({
   path: '/campaigns',
   getParentRoute: () => AppRoute,
 } as any)
+const AppAutomationRoute = AppAutomationRouteImport.update({
+  id: '/automation',
+  path: '/automation',
+  getParentRoute: () => AppRoute,
+} as any)
 const ApiPublicUnsubscribeRoute = ApiPublicUnsubscribeRouteImport.update({
   id: '/api/public/unsubscribe',
   path: '/api/public/unsubscribe',
@@ -125,10 +132,16 @@ const ApiPublicCronImapPollRoute = ApiPublicCronImapPollRouteImport.update({
   path: '/api/public/cron/imap-poll',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicCronAutonomousRoute = ApiPublicCronAutonomousRouteImport.update({
+  id: '/api/public/cron/autonomous',
+  path: '/api/public/cron/autonomous',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/automation': typeof AppAutomationRoute
   '/campaigns': typeof AppCampaignsRoute
   '/dashboard': typeof AppDashboardRoute
   '/deliverability': typeof AppDeliverabilityRoute
@@ -140,6 +153,7 @@ export interface FileRoutesByFullPath {
   '/sourcing': typeof AppSourcingRoute
   '/tasks': typeof AppTasksRoute
   '/api/public/unsubscribe': typeof ApiPublicUnsubscribeRoute
+  '/api/public/cron/autonomous': typeof ApiPublicCronAutonomousRoute
   '/api/public/cron/imap-poll': typeof ApiPublicCronImapPollRoute
   '/api/public/hooks/email-events': typeof ApiPublicHooksEmailEventsRoute
   '/api/public/t/$token': typeof ApiPublicTTokenRoute
@@ -149,6 +163,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/automation': typeof AppAutomationRoute
   '/campaigns': typeof AppCampaignsRoute
   '/dashboard': typeof AppDashboardRoute
   '/deliverability': typeof AppDeliverabilityRoute
@@ -160,6 +175,7 @@ export interface FileRoutesByTo {
   '/sourcing': typeof AppSourcingRoute
   '/tasks': typeof AppTasksRoute
   '/api/public/unsubscribe': typeof ApiPublicUnsubscribeRoute
+  '/api/public/cron/autonomous': typeof ApiPublicCronAutonomousRoute
   '/api/public/cron/imap-poll': typeof ApiPublicCronImapPollRoute
   '/api/public/hooks/email-events': typeof ApiPublicHooksEmailEventsRoute
   '/api/public/t/$token': typeof ApiPublicTTokenRoute
@@ -171,6 +187,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/_app': typeof AppRouteWithChildren
   '/auth': typeof AuthRoute
+  '/_app/automation': typeof AppAutomationRoute
   '/_app/campaigns': typeof AppCampaignsRoute
   '/_app/dashboard': typeof AppDashboardRoute
   '/_app/deliverability': typeof AppDeliverabilityRoute
@@ -182,6 +199,7 @@ export interface FileRoutesById {
   '/_app/sourcing': typeof AppSourcingRoute
   '/_app/tasks': typeof AppTasksRoute
   '/api/public/unsubscribe': typeof ApiPublicUnsubscribeRoute
+  '/api/public/cron/autonomous': typeof ApiPublicCronAutonomousRoute
   '/api/public/cron/imap-poll': typeof ApiPublicCronImapPollRoute
   '/api/public/hooks/email-events': typeof ApiPublicHooksEmailEventsRoute
   '/api/public/t/$token': typeof ApiPublicTTokenRoute
@@ -193,6 +211,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/auth'
+    | '/automation'
     | '/campaigns'
     | '/dashboard'
     | '/deliverability'
@@ -204,6 +223,7 @@ export interface FileRouteTypes {
     | '/sourcing'
     | '/tasks'
     | '/api/public/unsubscribe'
+    | '/api/public/cron/autonomous'
     | '/api/public/cron/imap-poll'
     | '/api/public/hooks/email-events'
     | '/api/public/t/$token'
@@ -213,6 +233,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/auth'
+    | '/automation'
     | '/campaigns'
     | '/dashboard'
     | '/deliverability'
@@ -224,6 +245,7 @@ export interface FileRouteTypes {
     | '/sourcing'
     | '/tasks'
     | '/api/public/unsubscribe'
+    | '/api/public/cron/autonomous'
     | '/api/public/cron/imap-poll'
     | '/api/public/hooks/email-events'
     | '/api/public/t/$token'
@@ -234,6 +256,7 @@ export interface FileRouteTypes {
     | '/'
     | '/_app'
     | '/auth'
+    | '/_app/automation'
     | '/_app/campaigns'
     | '/_app/dashboard'
     | '/_app/deliverability'
@@ -245,6 +268,7 @@ export interface FileRouteTypes {
     | '/_app/sourcing'
     | '/_app/tasks'
     | '/api/public/unsubscribe'
+    | '/api/public/cron/autonomous'
     | '/api/public/cron/imap-poll'
     | '/api/public/hooks/email-events'
     | '/api/public/t/$token'
@@ -257,6 +281,7 @@ export interface RootRouteChildren {
   AppRoute: typeof AppRouteWithChildren
   AuthRoute: typeof AuthRoute
   ApiPublicUnsubscribeRoute: typeof ApiPublicUnsubscribeRoute
+  ApiPublicCronAutonomousRoute: typeof ApiPublicCronAutonomousRoute
   ApiPublicCronImapPollRoute: typeof ApiPublicCronImapPollRoute
   ApiPublicHooksEmailEventsRoute: typeof ApiPublicHooksEmailEventsRoute
   ApiPublicTTokenRoute: typeof ApiPublicTTokenRoute
@@ -357,6 +382,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppCampaignsRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/automation': {
+      id: '/_app/automation'
+      path: '/automation'
+      fullPath: '/automation'
+      preLoaderRoute: typeof AppAutomationRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/api/public/unsubscribe': {
       id: '/api/public/unsubscribe'
       path: '/api/public/unsubscribe'
@@ -399,10 +431,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicCronImapPollRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/cron/autonomous': {
+      id: '/api/public/cron/autonomous'
+      path: '/api/public/cron/autonomous'
+      fullPath: '/api/public/cron/autonomous'
+      preLoaderRoute: typeof ApiPublicCronAutonomousRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 interface AppRouteChildren {
+  AppAutomationRoute: typeof AppAutomationRoute
   AppCampaignsRoute: typeof AppCampaignsRoute
   AppDashboardRoute: typeof AppDashboardRoute
   AppDeliverabilityRoute: typeof AppDeliverabilityRoute
@@ -416,6 +456,7 @@ interface AppRouteChildren {
 }
 
 const AppRouteChildren: AppRouteChildren = {
+  AppAutomationRoute: AppAutomationRoute,
   AppCampaignsRoute: AppCampaignsRoute,
   AppDashboardRoute: AppDashboardRoute,
   AppDeliverabilityRoute: AppDeliverabilityRoute,
@@ -435,6 +476,7 @@ const rootRouteChildren: RootRouteChildren = {
   AppRoute: AppRouteWithChildren,
   AuthRoute: AuthRoute,
   ApiPublicUnsubscribeRoute: ApiPublicUnsubscribeRoute,
+  ApiPublicCronAutonomousRoute: ApiPublicCronAutonomousRoute,
   ApiPublicCronImapPollRoute: ApiPublicCronImapPollRoute,
   ApiPublicHooksEmailEventsRoute: ApiPublicHooksEmailEventsRoute,
   ApiPublicTTokenRoute: ApiPublicTTokenRoute,
@@ -444,3 +486,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}

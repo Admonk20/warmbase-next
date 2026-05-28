@@ -9,18 +9,8 @@ export const Route = createFileRoute("/api/public/track/click")({
         const mid = url.searchParams.get("m");
         const target = url.searchParams.get("u");
         let dest = "/";
-        if (target) {
-          try {
-            const parsed = new URL(decodeURIComponent(target));
-            if (parsed.protocol === "http:" || parsed.protocol === "https:") {
-              dest = parsed.toString();
-            }
-          } catch {
-            /* keep dest */
-          }
-        }
         try {
-          if (mid && /^[a-f0-9]{6,64}$/i.test(mid)) {
+          if (mid && /^[a-f0-9]{6,64}$/i.test(mid) && target && target.length <= 4096) {
             const { data: prior } = await supabaseAdmin
               .from("email_events")
               .select("user_id, lead_id, campaign_id, subject")
@@ -28,6 +18,10 @@ export const Route = createFileRoute("/api/public/track/click")({
               .limit(1)
               .maybeSingle();
             if (prior) {
+              const parsed = new URL(decodeURIComponent(target));
+              if (parsed.protocol === "http:" || parsed.protocol === "https:") {
+                dest = parsed.toString();
+              }
               await supabaseAdmin.from("email_events").insert({
                 user_id: prior.user_id,
                 lead_id: prior.lead_id,

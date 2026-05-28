@@ -1,6 +1,7 @@
 // SMTP wrapper using nodemailer. Server-only.
 import nodemailer from "nodemailer";
 import { decryptSecret } from "./crypto.server";
+import { assertSafeMailEndpoint } from "./mail-host-guard.server";
 
 export type SmtpRow = {
   host: string;
@@ -28,6 +29,7 @@ export function transportFromRow(row: SmtpRow, password: string) {
 }
 
 export async function verifyTransport(row: SmtpRow, plaintextPassword?: string) {
+  await assertSafeMailEndpoint(row.host, row.port, "smtp");
   const pwd = plaintextPassword ?? (await decryptSecret(row.password_enc));
   const t = transportFromRow(row, pwd);
   try {
@@ -50,6 +52,7 @@ export type SendArgs = {
 };
 
 export async function smtpSend(row: SmtpRow, args: SendArgs) {
+  await assertSafeMailEndpoint(row.host, row.port, "smtp");
   const pwd = await decryptSecret(row.password_enc);
   const t = transportFromRow(row, pwd);
   try {

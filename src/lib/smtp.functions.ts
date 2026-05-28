@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { encryptSecret } from "./crypto.server";
+import { assertSafeMailEndpoint } from "./mail-host-guard.server";
 import { verifyTransport } from "./smtp.server";
 
 const SmtpInput = z.object({
@@ -37,6 +38,17 @@ export const saveSmtpSettings = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator(SmtpInput.parse)
   .handler(async ({ data, context }) => {
+    const smtpHost = await assertSafeMailEndpoint(data.host, data.port, "smtp");
+    const imapEnabled = data.imap_enabled ?? false;
+    const imapPort = data.imap_port ?? 993;
+    const imapHost =
+      imapEnabled && data.imap_host
+        ? await assertSafeMailEndpoint(data.imap_host, imapPort, "imap")
+        : null;
+    if (imapEnabled && (!imapHost || !data.imap_username)) {
+      throw new Error("IMAP host and username are required when IMAP is enabled");
+    }
+
     const { data: existing } = await context.supabase
       .from("user_smtp_settings")
       .select("password_enc, imap_password_enc")
@@ -51,10 +63,13 @@ export const saveSmtpSettings = createServerFn({ method: "POST" })
     const imap_password_enc = data.imap_password
       ? await encryptSecret(data.imap_password)
       : existing?.imap_password_enc ?? null;
+    if (imapEnabled && !imap_password_enc) {
+      throw new Error("IMAP password is required when IMAP is enabled");
+    }
 
     const row = {
       user_id: context.userId,
-      host: data.host,
+      host: smtpHost,
       port: data.port,
       secure: data.secure,
       username: data.username,
@@ -64,11 +79,11 @@ export const saveSmtpSettings = createServerFn({ method: "POST" })
       reply_to: data.reply_to || null,
       daily_cap: data.daily_cap ?? 50,
       warmup_enabled: data.warmup_enabled ?? true,
-      imap_host: data.imap_host || null,
-      imap_port: data.imap_port || 993,
+      imap_host: imapHost,
+      imap_port: imapHost ? imapPort : 993,
       imap_username: data.imap_username || null,
       imap_password_enc,
-      imap_enabled: data.imap_enabled ?? false,
+      imap_enabled: imapEnabled,
     };
 
     const { error } = await context.supabase
@@ -82,6 +97,7 @@ export const testSmtpConnection = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator(SmtpInput.parse)
   .handler(async ({ data, context }) => {
+    const smtpHost = await assertSafeMailEndpoint(data.host, data.port, "smtp");
     let password = data.password;
     if (!password) {
       const { data: existing } = await context.supabase
@@ -96,7 +112,7 @@ export const testSmtpConnection = createServerFn({ method: "POST" })
 
     const result = await verifyTransport(
       {
-        host: data.host,
+        host: smtpHost,
         port: data.port,
         secure: data.secure,
         username: data.username,

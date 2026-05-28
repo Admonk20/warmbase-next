@@ -14,6 +14,9 @@ export function newUnsubToken(userId: string, email: string) {
 /** Replace every absolute http(s) URL with a tracked redirect. */
 function wrapLinks(body: string, baseUrl: string, mid: string) {
   return body.replace(/https?:\/\/[^\s<>"')]+/g, (url) => {
+    if (url.includes("/api/public/track/") || url.includes("/api/public/unsubscribe") || url.includes("/api/public/t/")) {
+      return url;
+    }
     const u = encodeURIComponent(url);
     return `${baseUrl}/api/public/track/click?m=${mid}&u=${u}`;
   });

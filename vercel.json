@@ -1,0 +1,19 @@
+{
+  "version": 2,
+  "framework": "nextjs",
+  "builds": [
+    {
+      "src": "package.json",
+      "use": "@vercel/static-build",
+      "config": {
+        "distDir": ".output"
+      }
+    }
+  ],
+  "crons": [
+    {
+      "path": "/api/public/cron/autonomous",
+      "schedule": "0 * * * *"
+    }
+  ]
+}

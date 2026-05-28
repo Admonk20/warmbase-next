@@ -1,11 +1,13 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { chatCompletion, getUserOpenAIKey, getUserKimiKey } from "./ai.server";
+import { chatCompletion, getUserOpenAIKey, getUserKimiKey, getUserClaudeKey } from "./ai.server";
 import {
   buildQueries,
+  cleanPerson,
   firecrawlSearch,
   getFirecrawl,
+  leadKey,
   regexExtractFromMarkdown,
   uniqueByKey,
   type ExtractedPerson,
@@ -53,6 +55,9 @@ export const runSourcingStep = createServerFn({ method: "POST" })
     if (run.status === "done" || run.status === "error") {
       return { status: run.status, totals: run.totals };
     }
+    if (run.status === "running") {
+      return { status: run.status, totals: run.totals };
+    }
 
     const icp = run.icp as IcpInput;
     const queries = buildQueries(icp);
@@ -65,7 +70,7 @@ export const runSourcingStep = createServerFn({ method: "POST" })
     try {
       const fc = getFirecrawl();
       const hits: { url: string; title?: string; description?: string; markdown?: string }[] = [];
-      const perQuery = Math.max(3, Math.floor(icp.limit / queries.length));
+      const perQuery = Math.max(4, Math.ceil((icp.limit * 1.6) / Math.max(queries.length, 1)));
       for (const q of queries) {
         try {
           const results = await firecrawlSearch(fc, q, perQuery);
@@ -74,33 +79,21 @@ export const runSourcingStep = createServerFn({ method: "POST" })
           console.error("firecrawl search failed", q, e);
         }
       }
-      const deduped = uniqueByKey(hits, (h) => h.url).slice(0, icp.limit);
+      const deduped = uniqueByKey(hits, (h) => h.url).slice(0, Math.max(icp.limit * 2, 12));
 
       await context.supabase
         .from("sourcing_runs")
         .update({ step: "extracting", totals: { queries: queries.length, hits: deduped.length, findings: 0 } })
         .eq("id", run.id);
 
-      // Extract via AI (one batched call to keep latency + cost down)
-      const [openaiKey, kimiKey] = await Promise.all([getUserOpenAIKey(context.supabase, context.userId), getUserKimiKey(context.supabase, context.userId)]);
-      const sys = `You extract sales leads from web search results. Return JSON:
-{"people":[{"contact":"Full Name","title":"Job Title","company":"Company","email":"email or empty","linkedin_url":"url or empty","niche":"industry","summary":"why a good fit (1 sentence)","score":1-10,"source_url":"the url"}]}
-Only include items where you can identify at least a person OR a company. score = fit for our offer (1-10). Skip pure marketing pages.`;
-      const userMsg = `Our offer: ${icp.service}
-Target titles: ${icp.titles.join(", ") || "any"}
-Target industries: ${icp.industries.join(", ") || "any"}
-Geos: ${icp.geos.join(", ") || "any"}
+      const [openaiKey, kimiKey, claudeKey] = await Promise.all([
+        getUserOpenAIKey(context.supabase, context.userId),
+        getUserKimiKey(context.supabase, context.userId),
+        getUserClaudeKey(context.supabase, context.userId),
+      ]);
 
-Search hits (url + snippet):
-${deduped
-  .map(
-    (h, i) =>
-      `${i + 1}. ${h.url}
-   Title: ${h.title ?? ""}
-   Desc: ${h.description ?? ""}
-   Body: ${(h.markdown ?? "").slice(0, 600)}`,
-  )
-  .join("\n\n")}`;
+      const sys = `Extract B2B sales leads from search results. Return JSON: {"people":[{"contact":"Name","title":"Title","company":"Company","email":"Email","linkedin_url":"LinkedIn","niche":"Industry","summary":"Reason","score":1-10}]}`;
+      const userMsg = `Hits:\n${JSON.stringify(deduped.map(h => ({ url: h.url, desc: h.description })))}`;
 
       let extracted: Array<ExtractedPerson & { source_url?: string }> = [];
       try {
@@ -111,13 +104,13 @@ ${deduped
           ],
           openaiKey,
           kimiKey,
+          claudeKey,
           json: true,
           temperature: 0.3,
         });
         const parsed = JSON.parse(out) as { people?: Array<ExtractedPerson & { source_url?: string }> };
-        extracted = parsed.people ?? [];
+        extracted = (parsed.people ?? []).slice(0, icp.limit * 2);
       } catch (e) {
-        console.error("AI extract failed, falling back to regex", e);
         extracted = deduped
           .map((h) => {
             const ex = regexExtractFromMarkdown(h.markdown ?? h.description ?? "", h.url);
@@ -126,38 +119,42 @@ ${deduped
           .filter(Boolean) as Array<ExtractedPerson & { source_url?: string }>;
       }
 
-      // Dedupe against existing leads (by email)
-      const emails = extracted.map((p) => p.email?.toLowerCase()).filter(Boolean) as string[];
-      let existing = new Set<string>();
+      const cleaned = uniqueByKey(
+        extracted.map(cleanPerson).filter(Boolean),
+        (p) => leadKey(p),
+      );
+
+      const emails = cleaned.map((p) => p?.email).filter(Boolean) as string[];
+      const existing = new Set<string>();
       if (emails.length) {
         const { data: existingLeads } = await context.supabase
           .from("leads")
           .select("email")
           .in("email", emails);
-        existing = new Set((existingLeads ?? []).map((l) => (l.email ?? "").toLowerCase()));
+        for (const l of existingLeads ?? []) if (l.email) existing.add(`email:${l.email.toLowerCase()}`);
       }
 
-      const findings = extracted
-        .filter((p) => p.contact || p.email || p.linkedin_url)
+      const findings = cleaned
+        .filter((p) => p && !existing.has(leadKey(p)))
+        .sort((a, b) => Number(b?.score ?? 0) - Number(a?.score ?? 0))
+        .slice(0, icp.limit)
         .map((p) => ({
           user_id: context.userId,
           run_id: run.id,
-          contact: p.contact ?? null,
-          title: p.title ?? null,
-          company: p.company ?? null,
-          email: p.email ? p.email.toLowerCase() : null,
-          linkedin_url: p.linkedin_url ?? null,
-          source_url: p.source_url ?? null,
-          niche: p.niche ?? null,
-          score: Math.max(1, Math.min(10, Number(p.score ?? 5))),
-          summary: p.summary ?? null,
+          contact: p!.contact,
+          title: p!.title,
+          company: p!.company,
+          email: p!.email,
+          linkedin_url: p!.linkedin_url,
+          source_url: p!.source_url ?? null,
+          niche: p!.niche,
+          score: p!.score,
+          summary: p!.summary,
           payload: JSON.parse(JSON.stringify(p)) as never,
-        }))
-        .filter((f) => !(f.email && existing.has(f.email)));
+        }));
 
       if (findings.length) {
-        const { error: insErr } = await context.supabase.from("sourcing_findings").insert(findings);
-        if (insErr) throw new Error(insErr.message);
+        await context.supabase.from("sourcing_findings").insert(findings);
       }
 
       await context.supabase
@@ -246,7 +243,6 @@ export const promoteFindings = createServerFn({ method: "POST" })
       .select("id");
     if (insErr) throw new Error(insErr.message);
 
-    // Map findings → leads order is preserved
     const updates = findings.map((f, i) => ({
       id: f.id,
       lead_id: created?.[i]?.id ?? null,

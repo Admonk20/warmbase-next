@@ -96,7 +96,7 @@ export function CsvImporter({ open, onOpenChange, onDone }: { open: boolean; onO
       if (!raw) continue;
       if (target === "email") raw = raw.toLowerCase();
       if (target === "value") {
-        const n = Number(raw.replace(/[^0-9.\-]/g, ""));
+        const n = Number(raw.replace(/[^0-9.-]/g, ""));
         lead.value = Number.isFinite(n) ? n : 0;
         continue;
       }
@@ -121,7 +121,7 @@ export function CsvImporter({ open, onOpenChange, onDone }: { open: boolean; onO
     const allEmails: string[] = [];
     const built = rows.map(buildLeadFromRow).filter(Boolean) as Record<string, unknown>[];
     for (const l of built) if (l.email) allEmails.push(String(l.email));
-    let existing = new Map<string, string>();
+    const existing = new Map<string, string>();
     if (allEmails.length && (dupPolicy === "skip" || dupPolicy === "update")) {
       const { data: ex } = await supabase
         .from("leads")

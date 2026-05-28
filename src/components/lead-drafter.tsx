@@ -28,10 +28,14 @@ type ResearchOut = {
   summary: string;
   pains: string[];
   opportunities: string[];
+  personalization_angles?: string[];
   suggested_service: string;
   why_this_service: string;
+  objection_risk?: string;
   score: number;
+  confidence?: "low" | "medium" | "high";
   hook: string;
+  evidence?: string[];
 };
 
 export function LeadDrafter({ lead, open, onClose }: { lead: Lead | null; open: boolean; onClose: () => void }) {
@@ -89,6 +93,7 @@ export function LeadDrafter({ lead, open, onClose }: { lead: Lead | null; open: 
                 // 1. Always do deep research first
                 const r = await research({ data: {
                   lead: {
+                    id: lead.id,
                     contact: lead.contact,
                     company: lead.company ?? undefined,
                     title: lead.title ?? undefined,
@@ -119,8 +124,12 @@ export function LeadDrafter({ lead, open, onClose }: { lead: Lead | null; open: 
                     summary: ro.summary,
                     pains: ro.pains,
                     opportunities: ro.opportunities,
+                    personalization_angles: ro.personalization_angles ?? [],
                     why_this_service: ro.why_this_service,
+                    objection_risk: ro.objection_risk,
+                    confidence: ro.confidence,
                     hook: ro.hook,
+                    evidence: ro.evidence ?? [],
                   },
                   suggestedService: ro.suggested_service,
                 } });
@@ -152,6 +161,9 @@ export function LeadDrafter({ lead, open, onClose }: { lead: Lead | null; open: 
             <Card className="p-3 space-y-2 text-sm">
               <div className="flex flex-wrap items-center gap-2">
                 <Badge>Score {researchOut.score}/10</Badge>
+                {researchOut.confidence && (
+                  <Badge variant="outline">Confidence: {researchOut.confidence}</Badge>
+                )}
                 {researchOut.suggested_service && (
                   <Badge variant="secondary">AI pick: {researchOut.suggested_service}</Badge>
                 )}
@@ -176,7 +188,26 @@ export function LeadDrafter({ lead, open, onClose }: { lead: Lead | null; open: 
                   </ul>
                 </div>
               )}
+              {!!researchOut.personalization_angles?.length && (
+                <div>
+                  <div className="text-xs font-medium mt-1">Human angles</div>
+                  <ul className="list-disc pl-5 text-muted-foreground">
+                    {researchOut.personalization_angles.map((a, i) => <li key={i}>{a}</li>)}
+                  </ul>
+                </div>
+              )}
               {researchOut.hook && <p className="text-muted-foreground"><strong>Hook:</strong> {researchOut.hook}</p>}
+              {researchOut.objection_risk && (
+                <p className="text-muted-foreground"><strong>Likely objection:</strong> {researchOut.objection_risk}</p>
+              )}
+              {!!researchOut.evidence?.length && (
+                <div>
+                  <div className="text-xs font-medium mt-1">Evidence used</div>
+                  <ul className="list-disc pl-5 text-muted-foreground">
+                    {researchOut.evidence.map((e, i) => <li key={i}>{e}</li>)}
+                  </ul>
+                </div>
+              )}
             </Card>
           )}
 

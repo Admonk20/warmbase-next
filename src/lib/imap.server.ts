@@ -3,6 +3,7 @@
 import { ImapFlow } from "imapflow";
 import { simpleParser } from "mailparser";
 import { decryptSecret } from "./crypto.server";
+import { assertSafeMailEndpoint } from "./mail-host-guard.server";
 import { recomputeLeadScore } from "./scoring.server";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
@@ -18,10 +19,12 @@ export async function pollImapForUser(
   if (!row || !row.imap_enabled || !row.imap_host || !row.imap_username || !row.imap_password_enc) {
     return { ok: false, processed: 0, error: "IMAP not configured" };
   }
+  const imapPort = row.imap_port ?? 993;
+  const imapHost = await assertSafeMailEndpoint(row.imap_host, imapPort, "imap");
   const pwd = await decryptSecret(row.imap_password_enc);
   const client = new ImapFlow({
-    host: row.imap_host,
-    port: row.imap_port ?? 993,
+    host: imapHost,
+    port: imapPort,
     secure: true,
     auth: { user: row.imap_username, pass: pwd },
     logger: false,

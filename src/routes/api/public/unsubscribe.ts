@@ -1,8 +1,17 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 
+function escapeHtml(value: string) {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
 function htmlPage(title: string, body: string) {
-  return `<!doctype html><html><head><meta charset="utf-8"><title>${title}</title>
+  return `<!doctype html><html><head><meta charset="utf-8"><title>${escapeHtml(title)}</title>
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <style>body{font-family:system-ui,Arial,sans-serif;background:#0b0d10;color:#e7e9ec;margin:0;min-height:100vh;display:grid;place-items:center;padding:24px}
 .card{max-width:480px;width:100%;background:#15181d;border:1px solid #2a2f37;border-radius:16px;padding:28px;text-align:center}
@@ -48,12 +57,12 @@ export const Route = createFileRoute("/api/public/unsubscribe")({
             user_id: tok.user_id,
             event_type: "unsubscribed",
             subject: "Unsubscribe",
-            metadata: { email: tok.email, token },
+            metadata: { email: tok.email },
           });
           return new Response(
             htmlPage(
               "Unsubscribed",
-              `<h1>You're unsubscribed</h1><p><strong>${tok.email}</strong> will no longer receive emails from this sender.</p>`,
+              `<h1>You're unsubscribed</h1><p><strong>${escapeHtml(tok.email)}</strong> will no longer receive emails from this sender.</p>`,
             ),
             { status: 200, headers: { "Content-Type": "text/html" } },
           );

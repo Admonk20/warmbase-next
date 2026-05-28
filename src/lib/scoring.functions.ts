@@ -1,7 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { chatCompletion, getUserOpenAIKey, getUserKimiKey } from "./ai.server";
+import { chatCompletion, getUserOpenAIKey, getUserKimiKey, getUserClaudeKey } from "./ai.server";
 import { recomputeLeadScore, recomputeAllScores } from "./scoring.server";
 
 export const recomputeScores = createServerFn({ method: "POST" })
@@ -29,11 +29,16 @@ export const classifyReply = createServerFn({ method: "POST" })
   }).parse)
   .handler(async ({ data, context }) => {
     const sys = `Classify the email reply. Return JSON: {"label":"<one of: ${REPLY_LABELS.join(", ")}>", "summary":"<10 words>"}.`;
-    const [openaiKey, kimiKey] = await Promise.all([getUserOpenAIKey(context.supabase, context.userId), getUserKimiKey(context.supabase, context.userId)]);
+    const [openaiKey, kimiKey, claudeKey] = await Promise.all([
+      getUserOpenAIKey(context.supabase, context.userId),
+      getUserKimiKey(context.supabase, context.userId),
+      getUserClaudeKey(context.supabase, context.userId),
+    ]);
     const out = await chatCompletion({
       messages: [{ role: "system", content: sys }, { role: "user", content: data.body }],
       openaiKey,
       kimiKey,
+      claudeKey,
       json: true,
       temperature: 0.1,
     });
@@ -54,7 +59,6 @@ export const classifyReply = createServerFn({ method: "POST" })
         reason: label,
         metadata: { classified: true },
       });
-      // Auto status updates
       const statusMap: Record<string, string> = {
         interested: "engaged",
         unsubscribe: "lost",

@@ -1,9 +1,8 @@
-import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { z } from "zod";
 import { Mail, Lock, Loader2 } from "lucide-react";
 import { getBrowserSupabase } from "@/integrations/supabase/browser-client";
-import { lovable } from "@/integrations/lovable/index";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -65,8 +64,14 @@ function AuthPage() {
   async function google() {
     setBusy(true);
     try {
-      const r = await lovable.auth.signInWithOAuth("google", { redirect_uri: window.location.origin });
-      if (r.error) throw r.error;
+      const supabase = await getBrowserSupabase();
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: {
+          redirectTo: window.location.origin,
+        },
+      });
+      if (error) throw error;
     } catch (err: any) {
       toast.error(err?.message || "Google sign-in failed");
       setBusy(false);
@@ -80,60 +85,70 @@ function AuthPage() {
           <div className="size-9 rounded-lg bg-primary text-primary-foreground grid place-items-center">
             <Mail className="size-5" />
           </div>
-          <span className="font-semibold">ColdBase Pro</span>
+          <span className="font-semibold text-xl tracking-tight">WarmBase</span>
         </div>
         <div className="space-y-4 max-w-md">
-          <h1 className="text-3xl font-semibold leading-tight">The cold email OS for operators who ship.</h1>
-          <p className="text-muted-foreground">Pipeline, sequences, deliverability and AI assist — backed by encrypted, auth-gated infrastructure.</p>
-          <ul className="text-sm text-muted-foreground space-y-2">
-            <li className="flex gap-2"><Lock className="size-4 mt-0.5 text-primary" /> Server-side secrets, row-level security on every record.</li>
-            <li className="flex gap-2"><Mail className="size-4 mt-0.5 text-primary" /> Multi-account, multi-sender SMTP rotation.</li>
+          <h1 className="text-4xl font-bold leading-tight tracking-tighter">The autonomous growth engine.</h1>
+          <p className="text-lg text-muted-foreground">Sourcing, research, and outreach — running 24/7 on autopilot.</p>
+          <ul className="text-sm text-muted-foreground space-y-3">
+            <li className="flex gap-2 items-start"><Lock className="size-5 mt-0.5 text-primary shrink-0" /> Enterprise-grade security with encrypted secrets and RLS.</li>
+            <li className="flex gap-2 items-start"><Mail className="size-5 mt-0.5 text-primary shrink-0" /> Multi-provider AI orchestration with Kimi, Claude, and OpenAI.</li>
           </ul>
         </div>
-        <div className="text-xs text-muted-foreground">© {new Date().getFullYear()} ColdBase Pro</div>
+        <div className="text-xs text-muted-foreground">© {new Date().getFullYear()} WarmBase</div>
       </div>
 
-      <div className="flex items-center justify-center p-6">
-        <Card className="w-full max-w-md">
-          <CardHeader>
-            <CardTitle>Welcome</CardTitle>
-            <CardDescription>Sign in to your workspace or create a new account.</CardDescription>
+      <div className="flex items-center justify-center p-6 bg-muted/30">
+        <Card className="w-full max-w-md border-none shadow-2xl bg-background/80 backdrop-blur-xl">
+          <CardHeader className="space-y-1">
+            <CardTitle className="text-2xl font-bold">Welcome back</CardTitle>
+            <CardDescription>Enter your credentials to access your autonomous workspace.</CardDescription>
           </CardHeader>
           <CardContent>
-            <Tabs value={mode} onValueChange={(v) => setMode(v as any)}>
-              <TabsList className="grid grid-cols-2 w-full">
-                <TabsTrigger value="signin">Sign in</TabsTrigger>
-                <TabsTrigger value="signup">Sign up</TabsTrigger>
+            <Tabs value={mode} onValueChange={(v) => setMode(v as any)} className="w-full">
+              <TabsList className="grid grid-cols-2 w-full mb-8">
+                <TabsTrigger value="signin" className="text-xs uppercase tracking-widest font-semibold">Sign in</TabsTrigger>
+                <TabsTrigger value="signup" className="text-xs uppercase tracking-widest font-semibold">Sign up</TabsTrigger>
               </TabsList>
-              <TabsContent value={mode} className="mt-4">
-                <Button type="button" variant="outline" className="w-full" onClick={google} disabled={busy}>
-                  <svg viewBox="0 0 24 24" className="size-4"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09Z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.99.66-2.25 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84A11 11 0 0 0 12 23Z"/><path fill="#FBBC05" d="M5.84 14.1A6.6 6.6 0 0 1 5.5 12c0-.73.13-1.44.34-2.1V7.07H2.18A11 11 0 0 0 1 12c0 1.78.43 3.46 1.18 4.93l3.66-2.83Z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.65l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.83C6.71 7.31 9.14 5.38 12 5.38Z"/></svg>
+              <TabsContent value={mode} className="space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-500">
+                <Button type="button" variant="outline" className="w-full h-11 relative" onClick={google} disabled={busy}>
+                  <svg viewBox="0 0 24 24" className="size-4 mr-2"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09Z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.99.66-2.25 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84A11 11 0 0 0 12 23Z"/><path fill="#FBBC05" d="M5.84 14.1A6.6 6.6 0 0 1 5.5 12c0-.73.13-1.44.34-2.1V7.07H2.18A11 11 0 0 0 1 12c0 1.78.43 3.46 1.18 4.93l3.66-2.83Z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.65l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.83C6.71 7.31 9.14 5.38 12 5.38Z"/></svg>
                   Continue with Google
                 </Button>
-                <div className="my-4 flex items-center gap-3 text-xs text-muted-foreground">
-                  <div className="flex-1 border-t" /> or <div className="flex-1 border-t" />
+                <div className="relative">
+                  <div className="absolute inset-0 flex items-center">
+                    <span className="w-full border-t" />
+                  </div>
+                  <div className="relative flex justify-center text-xs uppercase">
+                    <span className="bg-background px-2 text-muted-foreground">Or continue with</span>
+                  </div>
                 </div>
-                <form onSubmit={submit} className="space-y-3">
+                <form onSubmit={submit} className="space-y-4">
                   {mode === "signup" && (
-                    <div className="space-y-1.5">
+                    <div className="space-y-2">
                       <Label htmlFor="name">Full name</Label>
-                      <Input id="name" autoComplete="name" value={name} onChange={(e) => setName(e.target.value)} required />
+                      <Input id="name" placeholder="John Doe" autoComplete="name" value={name} onChange={(e) => setName(e.target.value)} required />
                     </div>
                   )}
-                  <div className="space-y-1.5">
+                  <div className="space-y-2">
                     <Label htmlFor="email">Email</Label>
-                    <Input id="email" type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+                    <Input id="email" type="email" placeholder="name@company.com" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
                   </div>
-                  <div className="space-y-1.5">
-                    <Label htmlFor="password">Password</Label>
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor="password">Password</Label>
+                      {mode === "signin" && (
+                        <button type="button" className="text-xs text-primary hover:underline">Forgot password?</button>
+                      )}
+                    </div>
                     <Input id="password" type="password" autoComplete={mode === "signin" ? "current-password" : "new-password"} value={password} onChange={(e) => setPassword(e.target.value)} required minLength={8} />
                   </div>
-                  <Button type="submit" className="w-full" disabled={busy}>
-                    {busy && <Loader2 className="size-4 animate-spin" />}
-                    {mode === "signin" ? "Sign in" : "Create account"}
+                  <Button type="submit" className="w-full h-11 font-bold" disabled={busy}>
+                    {busy && <Loader2 className="size-4 animate-spin mr-2" />}
+                    {mode === "signin" ? "Sign in to WarmBase" : "Create account"}
                   </Button>
-                  <p className="text-xs text-muted-foreground text-center">
-                    By continuing you agree to our terms. Passwords are checked against known breach databases.
+                  <p className="text-xs text-muted-foreground text-center px-8">
+                    By clicking continue, you agree to our <button type="button" className="underline underline-offset-4 hover:text-primary">Terms of Service</button> and <button type="button" className="underline underline-offset-4 hover:text-primary">Privacy Policy</button>.
                   </p>
                 </form>
               </TabsContent>

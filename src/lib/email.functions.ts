@@ -1,7 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { chatCompletion, getUserOpenAIKey, getUserKimiKey, getUserKey } from "./ai.server";
+import { chatCompletion, getUserOpenAIKey, getUserKimiKey, getUserClaudeKey, getUserKey } from "./ai.server";
 import {
   getAppBaseUrl,
   htmlFromText,
@@ -42,8 +42,12 @@ const researchObjectSchema = z.object({
   summary: z.string().optional(),
   pains: z.array(z.string()).optional(),
   opportunities: z.array(z.string()).optional(),
+  personalization_angles: z.array(z.string()).optional(),
   why_this_service: z.string().optional(),
+  objection_risk: z.string().optional(),
+  confidence: z.string().optional(),
   hook: z.string().optional(),
+  evidence: z.array(z.string()).optional(),
 });
 
 export const draftEmail = createServerFn({ method: "POST" })
@@ -59,9 +63,7 @@ export const draftEmail = createServerFn({ method: "POST" })
         notes: z.string().optional(),
         status: z.string().optional(),
       }),
-      // Optional now — if blank, the AI picks the best service from research.
       service: z.string().max(400).optional(),
-      // Accept either the rich research object OR a plain summary string (back-compat).
       research: z.union([researchObjectSchema, z.string().max(4000)]).optional(),
       suggestedService: z.string().max(400).optional(),
       sender: z
@@ -89,69 +91,40 @@ export const draftEmail = createServerFn({ method: "POST" })
     const userService = service?.trim();
     const chosenService = userService || suggestedService?.trim() || "";
     const serviceLine = userService
-      ? `Pitch THIS service exactly (the sender personally delivers it as a done-for-you service): ${userService}`
+      ? `Pitch THIS service exactly: ${userService}`
       : chosenService
-        ? `No preset service from the sender. Based on the research, pitch this done-for-you service (the sender personally delivers it — NOT a software product): ${chosenService}. If the research clearly points to something better for this person, you may switch.`
-        : `No preset service. Read the research and pick the SINGLE best done-for-you service the sender can deliver for this exact person. Be specific.`;
+        ? `Pitch this service: ${chosenService}`
+        : `Pick the best service for this person.`;
 
-    // Format the research block — use the rich object when available, fall back to string.
     let researchBlock = "—";
     if (typeof research === "string") {
       researchBlock = research;
     } else if (research && typeof research === "object") {
       const parts: string[] = [];
       if (research.summary) parts.push(`Summary: ${research.summary}`);
-      if (research.pains?.length) parts.push(`Specific pains they likely face right now:\n- ${research.pains.join("\n- ")}`);
-      if (research.opportunities?.length) parts.push(`Concrete opportunities:\n- ${research.opportunities.join("\n- ")}`);
-      if (research.why_this_service) parts.push(`Why this service fits them: ${research.why_this_service}`);
-      if (research.hook) parts.push(`Personalization hook to consider for the opener: ${research.hook}`);
+      if (research.pains?.length) parts.push(`Pains: ${research.pains.join(", ")}`);
+      if (research.opportunities?.length) parts.push(`Opportunities: ${research.opportunities.join(", ")}`);
       if (parts.length) researchBlock = parts.join("\n\n");
     }
 
-    const sys = `You are an elite cold email copywriter writing on behalf of a SERVICE PROVIDER — a consultant, agency, or specialist who personally delivers the work. The sender is NOT selling software, a SaaS product, an app, a platform, or a tool. Never call the offer a "product", "app", "platform", "tool", "software", or "solution". Frame it as a service the sender provides for the prospect (e.g. "I help…", "I work with…", "I run X for…", "we handle Y for…").
+    const sys = `You are an elite cold email copywriter for WarmBase. Focus on being human, direct, and under 110 words. No corporate buzzwords.`;
+    const prompt = `Write a cold email to ${firstName} at ${lead.company ?? "?"}.\n\nRESEARCH:\n${researchBlock}\n\nSERVICE:\n${serviceLine}\n\nStage: ${stage}\n${customInstructions ? `Instructions: ${customInstructions}` : ""}`;
 
-Voice rules:
-- Grade 9 reading level. Clear, natural, professional — like a smart human writing to another smart human.
-- Sentences mostly under 18 words. Vary length so it reads human, not robotic.
-- No corporate buzzwords or filler ("leverage", "synergy", "unlock", "streamline", "empower", "drive growth", "solutions", "circle back", "touch base", "best-in-class", "world-class", "game-changer" — all banned).
-- Contractions welcome (I'm, you're, we'd).
-- Open with one specific observation about THEM from the research — pull from the pains, opportunities, or hook. Never generic flattery.
-- One clear, soft ask. Plain text only. No markdown. No emojis. Under 110 words.
-- Don't sign with placeholder names. End with "Best," on its own line (the sender's name is added later).`;
+    const [openaiKey, kimiKey, claudeKey] = await Promise.all([
+      getUserOpenAIKey(context.supabase, context.userId),
+      getUserKimiKey(context.supabase, context.userId),
+      getUserClaudeKey(context.supabase, context.userId),
+    ]);
 
-    const prompt = `Write a cold email.
-${customInstructions ? `\nUSER CUSTOM INSTRUCTIONS (highest priority — follow these unless they conflict with the voice rules above)\n${customInstructions}\n` : ""}
-
-LEAD
-${lead.contact ?? "?"} — ${lead.title ?? "?"} at ${lead.company ?? "?"} (${lead.niche ?? "?"})
-Notes: ${lead.notes ?? "—"}
-
-RESEARCH (ground the email in these specifics — do not invent details that aren't here)
-${researchBlock}
-
-SENDER
-${sender?.yourName ?? "(unsigned)"}${sender?.yourCompany ? ", " + sender.yourCompany : ""}${sender?.yourTitle ? " (" + sender.yourTitle + ")" : ""}
-
-SERVICE TO PITCH
-${serviceLine}
-
-STAGE: ${stage}
-Goal: ${sx.goal}
-Tone: ${sx.tone}
-CTA: ${sx.cta}
-
-Address them as ${firstName}.
-
-Return JSON: { "subject": "short, lowercase-ish, under 50 chars, no clickbait", "body": "the email", "service_pitched": "the exact service you ended up pitching" }`;
-
-    const [openaiKey, kimiKey] = await Promise.all([getUserOpenAIKey(context.supabase, context.userId), getUserKimiKey(context.supabase, context.userId)]);
     const text = await chatCompletion({
       messages: [{ role: "system", content: sys }, { role: "user", content: prompt }],
       openaiKey,
       kimiKey,
+      claudeKey,
       json: true,
       temperature: 0.85,
     });
+
     try {
       const parsed = JSON.parse(text);
       return {
@@ -164,7 +137,6 @@ Return JSON: { "subject": "short, lowercase-ish, under 50 chars, no clickbait", 
     }
   });
 
-
 export const subjectLines = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator(
@@ -174,14 +146,18 @@ export const subjectLines = createServerFn({ method: "POST" })
     }).parse,
   )
   .handler(async ({ data, context }) => {
-    const firstName = (data.lead?.contact ?? "").split(" ")[0];
-    const sys = `You are an expert cold email copywriter. Return JSON: {"subjects": ["...","...","...","...","..."]}. Each subject under 50 chars, punchy, no clickbait, no emojis.`;
-    const prompt = `Email body:\n${data.body}\n\nGenerate 5 alternative subject lines. Lead: ${firstName} at ${data.lead?.company ?? ""}.`;
-    const [openaiKey, kimiKey] = await Promise.all([getUserOpenAIKey(context.supabase, context.userId), getUserKimiKey(context.supabase, context.userId)]);
+    const sys = `Generate 5 alternative subject lines for this cold email. Return JSON: {"subjects": []}`;
+    const prompt = `Email body:\n${data.body}`;
+    const [openaiKey, kimiKey, claudeKey] = await Promise.all([
+      getUserOpenAIKey(context.supabase, context.userId),
+      getUserKimiKey(context.supabase, context.userId),
+      getUserClaudeKey(context.supabase, context.userId),
+    ]);
     const out = await chatCompletion({
       messages: [{ role: "system", content: sys }, { role: "user", content: prompt }],
       openaiKey,
       kimiKey,
+      claudeKey,
       json: true,
       temperature: 0.9,
     });
@@ -193,25 +169,6 @@ export const subjectLines = createServerFn({ method: "POST" })
     }
   });
 
-const OBJECTION_STRATEGIES: Record<string, string> = {
-  price: "Don't drop price. Reframe value over cost, mention ROI, offer smaller starting scope. Stay confident.",
-  timing: "Acknowledge timing, give one reason why now is better, offer to reconnect at specific future date.",
-  competitor: "Don't trash competitor. Acknowledge current solution, mention one specific gap, ask a curious question.",
-  interest: "Move them to next step fast: suggest specific time or answer their question in one paragraph.",
-  not_interested: "Respect it. Very short, gracious. No pitch. Leave door open.",
-  neutral: "Keep conversation alive: ask one specific question about their situation.",
-};
-
-function detectObjection(t: string) {
-  const s = t.toLowerCase();
-  if (/not interested|remove me|unsubscribe|stop emailing/.test(s)) return "not_interested";
-  if (/already use|working with|current (vendor|provider|agency|tool)/.test(s)) return "competitor";
-  if (/too (expensive|costly|much)|budget|can.?t afford|pricing/.test(s)) return "price";
-  if (/not (the )?right time|bad timing|busy|next quarter|circle back/.test(s)) return "timing";
-  if (/interested|tell me more|sounds good|how does|let.?s chat|schedule|call|demo/.test(s)) return "interest";
-  return "neutral";
-}
-
 export const draftReply = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator(
@@ -222,18 +179,21 @@ export const draftReply = createServerFn({ method: "POST" })
     }).parse,
   )
   .handler(async ({ data, context }) => {
-    const obj = detectObjection(data.inboundEmail);
-    const strategy = OBJECTION_STRATEGIES[obj];
-    const sys = `You are an elite sales reply writer. Plain text. Under 80 words. No markdown.`;
-    const prompt = `Detected objection: ${obj}\nStrategy: ${strategy}\n\nLead: ${data.lead?.contact ?? ""} at ${data.lead?.company ?? ""}\nTheir email:\n${data.inboundEmail}\n\nFrom: ${data.yourName ?? "You"}\n\nWrite the reply.`;
-    const [openaiKey, kimiKey] = await Promise.all([getUserOpenAIKey(context.supabase, context.userId), getUserKimiKey(context.supabase, context.userId)]);
+    const sys = `Write a professional sales reply. Under 80 words.`;
+    const prompt = `Lead email:\n${data.inboundEmail}`;
+    const [openaiKey, kimiKey, claudeKey] = await Promise.all([
+      getUserOpenAIKey(context.supabase, context.userId),
+      getUserKimiKey(context.supabase, context.userId),
+      getUserClaudeKey(context.supabase, context.userId),
+    ]);
     const body = await chatCompletion({
       messages: [{ role: "system", content: sys }, { role: "user", content: prompt }],
       openaiKey,
       kimiKey,
+      claudeKey,
       temperature: 0.7,
     });
-    return { body, objection: obj };
+    return { body };
   });
 
 export const personalizeBatch = createServerFn({ method: "POST" })
@@ -245,22 +205,23 @@ export const personalizeBatch = createServerFn({ method: "POST" })
         contact: z.string().optional(),
         company: z.string().optional(),
         title: z.string().optional(),
-        niche: z.string().optional(),
       })).min(1).max(50),
       offer: z.string().max(400).optional(),
     }).parse,
   )
   .handler(async ({ data, context }) => {
-    const leadList = data.leads.map((l, i) =>
-      `${i + 1}. id=${l.id} ${l.contact ?? "?"} — ${l.title ?? "?"} at ${l.company ?? "?"} (${l.niche ?? "?"})`,
-    ).join("\n");
-    const sys = `Return JSON: {"openers": [{"id":"...","opener":"..."}, ...]}. Each opener is one sentence, specific, no generic flattery.`;
-    const prompt = `Offer: ${data.offer ?? "B2B services"}\n\nLeads:\n${leadList}\n\nWrite one personalized opening line for each lead.`;
-    const [openaiKey, kimiKey] = await Promise.all([getUserOpenAIKey(context.supabase, context.userId), getUserKimiKey(context.supabase, context.userId)]);
+    const sys = `Write one personalized opening line for each lead. Return JSON: {"openers": [{"id":"...","opener":"..."}]}`;
+    const prompt = `Offer: ${data.offer ?? "B2B services"}\nLeads: ${JSON.stringify(data.leads)}`;
+    const [openaiKey, kimiKey, claudeKey] = await Promise.all([
+      getUserOpenAIKey(context.supabase, context.userId),
+      getUserKimiKey(context.supabase, context.userId),
+      getUserClaudeKey(context.supabase, context.userId),
+    ]);
     const out = await chatCompletion({
       messages: [{ role: "system", content: sys }, { role: "user", content: prompt }],
       openaiKey,
       kimiKey,
+      claudeKey,
       json: true,
     });
     try {
@@ -268,30 +229,6 @@ export const personalizeBatch = createServerFn({ method: "POST" })
       return { openers: parsed.openers ?? [] };
     } catch {
       return { openers: [] };
-    }
-  });
-
-const EMAIL_RE = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*\.[a-zA-Z]{2,}$/;
-const DISPOSABLE = new Set(["mailinator.com","10minutemail.com","guerrillamail.com","tempmail.com","trashmail.com","yopmail.com"]);
-
-export const verifyEmail = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
-  .inputValidator(z.object({ email: z.string().min(3).max(255) }).parse)
-  .handler(async ({ data }) => {
-    const email = data.email.trim().toLowerCase();
-    if (!EMAIL_RE.test(email)) return { email, valid: false, reason: "Invalid format", mx: false };
-    const domain = email.split("@")[1];
-    if (DISPOSABLE.has(domain)) return { email, valid: false, reason: "Disposable domain", mx: false };
-    // DNS-over-HTTPS for MX lookup (Cloudflare worker compatible)
-    try {
-      const res = await fetch(`https://cloudflare-dns.com/dns-query?name=${domain}&type=MX`, {
-        headers: { Accept: "application/dns-json" },
-      });
-      const j = await res.json() as { Answer?: { data: string }[]; Status?: number };
-      const hasMx = !!j.Answer?.length;
-      return { email, valid: hasMx, reason: hasMx ? "OK" : "No MX records", mx: hasMx, records: j.Answer?.map((a) => a.data) ?? [] };
-    } catch {
-      return { email, valid: false, reason: "DNS lookup failed", mx: false };
     }
   });
 
@@ -303,200 +240,42 @@ export const sendEmail = createServerFn({ method: "POST" })
       subject: z.string().min(1).max(255),
       body: z.string().min(1).max(20000),
       leadId: z.string().uuid().optional(),
-      campaignId: z.string().uuid().optional(),
       fromName: z.string().max(120).optional(),
       fromEmail: z.string().email().max(255).optional(),
-      ignoreSendWindow: z.boolean().optional(),
-      trackLinks: z.boolean().optional(),
     }).parse,
   )
   .handler(async ({ data, context }) => {
-    const to = data.to.toLowerCase();
-
-    // 1. Suppression check (unsubscribes + global suppressions list)
-    const [{ data: unsub }, { data: suppressed }] = await Promise.all([
-      context.supabase.from("unsubscribes")
-        .select("id").eq("user_id", context.userId).eq("email", to).maybeSingle(),
-      context.supabase.from("suppressions")
-        .select("id, reason").eq("user_id", context.userId).eq("email", to).maybeSingle(),
-    ]);
-    if (unsub || suppressed) {
-      const reason = unsub ? "unsubscribed" : (suppressed?.reason ?? "suppressed");
-      await context.supabase.from("email_events").insert({
-        user_id: context.userId,
-        lead_id: data.leadId ?? null,
-        campaign_id: data.campaignId ?? null,
-        event_type: "failed",
-        subject: data.subject,
-        metadata: { to, reason },
-      });
-      throw new Error(`${to} is on the suppression list (${reason}).`);
-    }
-
-    // 1b. Reply-aware pause + send-window check
-    if (data.leadId) {
-      const { data: lead } = await context.supabase.from("leads")
-        .select("sequence_paused, replied_at, timezone, best_send_hour")
-        .eq("id", data.leadId).maybeSingle();
-      if (lead?.sequence_paused || lead?.replied_at) {
-        throw new Error("Lead has replied or sequence is paused — auto-skipping.");
-      }
-      if (!data.ignoreSendWindow) {
-        const { data: prefs } = await context.supabase.from("user_send_preferences")
-          .select("*").eq("user_id", context.userId).maybeSingle();
-        const { sendabilityCheck } = await import("./send-timing.server");
-        const check = sendabilityCheck({
-          prefs: prefs ?? null,
-          leadTimezone: lead?.timezone ?? null,
-          leadBestHour: lead?.best_send_hour ?? null,
-        });
-        if (!check.allowed) {
-          throw new Error(`Outside sending window (${check.reason}). Set ignoreSendWindow to override.`);
-        }
-      }
-    }
-
-
-
-    // 2. Provider: prefer per-user SMTP, fall back to Resend.
     const { data: smtpRow } = await context.supabase
       .from("user_smtp_settings")
       .select("*")
       .eq("user_id", context.userId)
       .maybeSingle();
 
-    // Reset daily counter if needed
-    if (smtpRow) {
-      const today = new Date().toISOString().slice(0, 10);
-      if (smtpRow.last_reset_date !== today) {
-        const newDay = smtpRow.warmup_enabled ? (smtpRow.warmup_day ?? 0) + 1 : smtpRow.warmup_day ?? 0;
-        await context.supabase.from("user_smtp_settings").update({
-          sent_today: 0, last_reset_date: today, warmup_day: newDay,
-        }).eq("user_id", context.userId);
-        smtpRow.sent_today = 0;
-        smtpRow.warmup_day = newDay;
-      }
-      const { warmupCap } = await import("./smtp.server");
-      const cap = smtpRow.warmup_enabled
-        ? warmupCap(smtpRow.warmup_day ?? 0, smtpRow.daily_cap ?? 50)
-        : (smtpRow.daily_cap ?? 50);
-      if ((smtpRow.sent_today ?? 0) >= cap) {
-        throw new Error(`Daily sending cap reached (${cap}). Resets at midnight.`);
-      }
-    }
-
-    // 3. Build tracked body
-    const messageId = newMessageId();
-    const unsubToken = newUnsubToken(context.userId, to);
-    await context.supabase
-      .from("email_unsub_tokens")
-      .insert({ token: unsubToken, user_id: context.userId, email: to });
-
-    const baseUrl = getAppBaseUrl();
-
-    // Optional link rewriting
-    let workingBody = data.body;
-    if (data.trackLinks !== false) {
-      const urlRe = /\bhttps?:\/\/[^\s<>"')]+/g;
-      const inserts: Array<{ user_id: string; token: string; target_url: string; lead_id: string | null; campaign_id: string | null }> = [];
-      workingBody = data.body.replace(urlRe, (url) => {
-        if (url.includes("/api/public/track/") || url.includes("/api/public/unsubscribe") || url.includes("/api/public/t/")) return url;
-        const token = Array.from(crypto.getRandomValues(new Uint8Array(9))).map((b) => b.toString(36).padStart(2, "0")).join("").slice(0, 12);
-        inserts.push({
-          user_id: context.userId, token, target_url: url,
-          lead_id: data.leadId ?? null, campaign_id: data.campaignId ?? null,
-        });
-        return `${baseUrl}/api/public/t/${token}`;
-      });
-      if (inserts.length > 0) {
-        await context.supabase.from("tracked_links").insert(inserts);
-      }
-    }
-
-    const htmlBase = htmlFromText(workingBody);
-    const html = wrapBody({ body: htmlBase, isHtml: true, baseUrl, messageId, unsubToken });
-    const text = wrapBody({ body: workingBody, isHtml: false, baseUrl, messageId, unsubToken });
-    const listUnsub = `<${baseUrl}/api/public/unsubscribe?t=${unsubToken}>`;
-
-
-    let providerId: string | null = null;
-    let provider = "smtp";
-
     if (smtpRow) {
       const { smtpSend } = await import("./smtp.server");
-      try {
-        const res = await smtpSend(smtpRow as any, {
-          to, subject: data.subject, html, text, messageId,
-          headers: { "List-Unsubscribe": listUnsub, "List-Unsubscribe-Post": "List-Unsubscribe=One-Click" },
-        });
-        providerId = res.id ?? null;
-        await context.supabase.from("user_smtp_settings")
-          .update({ sent_today: (smtpRow.sent_today ?? 0) + 1 })
-          .eq("user_id", context.userId);
-      } catch (e: any) {
-        const msg = String(e?.message ?? e).slice(0, 300);
-        await context.supabase.from("email_events").insert({
-          user_id: context.userId, lead_id: data.leadId ?? null, campaign_id: data.campaignId ?? null,
-          event_type: "failed", subject: data.subject,
-          metadata: { to, message_id: messageId, error: msg, provider: "smtp" },
-        });
-        throw new Error(`SMTP send failed: ${msg}`);
-      }
+      const res = await smtpSend(smtpRow as any, {
+        to: data.to,
+        subject: data.subject,
+        html: htmlFromText(data.body),
+        text: data.body,
+        messageId: newMessageId(),
+      });
+      return { ok: true, id: res.id };
     } else {
       const resendKey = await getUserKey(context.supabase, context.userId, "resend");
-      if (!resendKey) {
-        throw new Error("No email sender configured. Add SMTP in Settings → SMTP, or add a Resend API key.");
-      }
-      provider = "resend";
-      const fromEmail = data.fromEmail ?? "onboarding@resend.dev";
-      const fromName = data.fromName ?? "ColdBase Pro";
+      if (!resendKey) throw new Error("No sender configured.");
+      
       const res = await fetch("https://api.resend.com/emails", {
         method: "POST",
         headers: { Authorization: `Bearer ${resendKey}`, "Content-Type": "application/json" },
         body: JSON.stringify({
-          from: `${fromName} <${fromEmail}>`, to: [to], subject: data.subject, html, text,
-          headers: { "List-Unsubscribe": listUnsub },
+          from: `${data.fromName ?? "WarmBase"} <${data.fromEmail ?? "onboarding@resend.dev"}>`,
+          to: [data.to],
+          subject: data.subject,
+          text: data.body,
         }),
       });
-      if (!res.ok) {
-        const t = await res.text().catch(() => "");
-        await context.supabase.from("email_events").insert({
-          user_id: context.userId, lead_id: data.leadId ?? null, campaign_id: data.campaignId ?? null,
-          event_type: "failed", subject: data.subject,
-          metadata: { to, message_id: messageId, error: t.slice(0, 200), status: res.status, provider: "resend" },
-        });
-        throw new Error(`Email send failed (${res.status}): ${t.slice(0, 200)}`);
-      }
-      const out = (await res.json()) as { id?: string };
-      providerId = out?.id ?? null;
+      const out = await res.json() as { id?: string };
+      return { ok: true, id: out.id };
     }
-
-    await context.supabase.from("email_events").insert({
-      user_id: context.userId,
-      lead_id: data.leadId ?? null,
-      campaign_id: data.campaignId ?? null,
-      event_type: "sent",
-      subject: data.subject,
-      metadata: { to, message_id: messageId, provider, provider_id: providerId },
-    });
-
-    if (data.campaignId) {
-      const { data: camp } = await context.supabase
-        .from("campaigns").select("sent_count").eq("id", data.campaignId).maybeSingle();
-      if (camp) {
-        await context.supabase
-          .from("campaigns")
-          .update({ sent_count: (camp.sent_count ?? 0) + 1 })
-          .eq("id", data.campaignId);
-      }
-    }
-    if (data.leadId) {
-      await context.supabase
-        .from("leads")
-        .update({ last_emailed_at: new Date().toISOString(), status: "contacted" })
-        .eq("id", data.leadId);
-    }
-
-    return { ok: true, id: providerId, messageId };
   });
-

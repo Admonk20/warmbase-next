@@ -326,6 +326,7 @@ function Leads() {
                 <TableHead>Contact</TableHead>
                 <TableHead>Company</TableHead>
                 <TableHead>Email</TableHead>
+                <TableHead>Score</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="w-[140px] text-right">Actions</TableHead>
               </TableRow>
@@ -342,6 +343,13 @@ function Leads() {
                   </TableCell>
                   <TableCell>{l.company || "—"}</TableCell>
                   <TableCell className="text-muted-foreground">{l.email || "—"}</TableCell>
+                  <TableCell>
+                    {l.score ? (
+                      <Badge variant="outline" className={`${l.score >= 7 ? 'text-emerald-500 border-emerald-500/20 bg-emerald-500/5' : 'text-amber-500 border-amber-500/20 bg-amber-500/5'}`}>
+                        {l.score}/10
+                      </Badge>
+                    ) : '—'}
+                  </TableCell>
                   <TableCell>
                     <Select value={l.status} onValueChange={(v) => updateStatus.mutate({ id: l.id, status: v })}>
                       <SelectTrigger className="h-8 w-[130px]">

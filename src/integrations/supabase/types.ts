@@ -1013,6 +1013,25 @@ export type Database = {
         }
         Returns: boolean
       }
+      increment_tracked_link_click: {
+        Args: {
+          _link_id: string
+        }
+        Returns: undefined
+      }
+      release_smtp_send: {
+        Args: {
+          _user_id: string
+        }
+        Returns: undefined
+      }
+      reserve_smtp_send: {
+        Args: {
+          _cap: number
+          _user_id: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
       app_role: "admin" | "user"
