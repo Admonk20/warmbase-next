@@ -36,7 +36,6 @@ export async function chatCompletion({
   const activeClaudeKey = claudeKey || process.env.ANTHROPIC_API_KEY;
   const activeOpenaiKey = openaiKey || process.env.OPENAI_API_KEY;
 
-<<<<<<< HEAD
   // Priority: Kimi > Claude > OpenAI
   if (activeKimiKey) {
     return chatKimi(messages, activeKimiKey, model, json, temperature);
@@ -46,25 +45,6 @@ export async function chatCompletion({
   }
   if (activeOpenaiKey) {
     return chatOpenAI(messages, activeOpenaiKey, model, json, temperature);
-=======
-  let url: string;
-  let apiKey: string;
-  let chosenModel: string;
-
-  if (useKimi) {
-    url = "https://api.moonshot.ai/v1/chat/completions";
-    apiKey = kimiKey!;
-    chosenModel = model ?? "kimi-k2.5";
-    if (chosenModel === "kimi-k2.6" || chosenModel === "kimi-k2.5") temperature = 1;
-  } else if (useOpenAI) {
-    url = "https://api.openai.com/v1/chat/completions";
-    apiKey = openaiKey!;
-    chosenModel = model ?? "gpt-4o-mini";
-  } else {
-    url = LOVABLE_GATEWAY_URL;
-    apiKey = process.env.LOVABLE_API_KEY!;
-    chosenModel = model ?? "google/gemini-2.5-flash";
->>>>>>> 0d5cac3ed1521cd54d2a6f296a120925cff2bc3e
   }
 
   throw new Error("No AI provider key configured. Please add a key in Settings.");
