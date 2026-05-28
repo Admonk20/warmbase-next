@@ -7,12 +7,20 @@
       "config": {
         "distDir": "dist/client"
       }
+    },
+    {
+      "src": "api/ssr.ts",
+      "use": "@vercel/node"
     }
   ],
-  "rewrites": [
+  "routes": [
     {
-      "source": "/(.*)",
-      "destination": "/api/ssr"
+      "src": "/api/ssr",
+      "dest": "/api/ssr"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/api/ssr"
     }
   ],
   "crons": [
