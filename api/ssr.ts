@@ -1,7 +1,7 @@
 import { fileURLToPath } from "node:url";
 import fs from "node:fs/promises";
 import path from "node:path";
-// @ts-ignore: runtime import of the compiled server bundle
+// @ts-expect-error: runtime import of the compiled server bundle
 import server from "../dist/server/server.js";
 
 const __filename = fileURLToPath(import.meta.url);
