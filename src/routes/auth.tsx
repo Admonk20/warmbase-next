@@ -1,7 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { z } from "zod";
-import { Mail, Lock, Loader2 } from "lucide-react";
+import { Mail, Lock, Loader2, Eye, EyeOff } from "lucide-react";
 import { getBrowserSupabase } from "@/integrations/supabase/browser-client";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
@@ -25,6 +25,7 @@ function AuthPage() {
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
   const [busy, setBusy] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   useEffect(() => {
     if (!loading && user) nav({ to: "/dashboard", replace: true });
@@ -141,14 +142,33 @@ function AuthPage() {
                         <button type="button" className="text-xs text-primary hover:underline">Forgot password?</button>
                       )}
                     </div>
-                    <Input id="password" type="password" autoComplete={mode === "signin" ? "current-password" : "new-password"} value={password} onChange={(e) => setPassword(e.target.value)} required minLength={8} />
+                    <div className="relative">
+                      <Input
+                        id="password"
+                        className="pr-10"
+                        type={showPassword ? "text" : "password"}
+                        autoComplete={mode === "signin" ? "current-password" : "new-password"}
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        required
+                        minLength={8}
+                      />
+                      <button
+                        type="button"
+                        className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-primary"
+                        onClick={() => setShowPassword((s) => !s)}
+                        aria-label={showPassword ? "Hide password" : "Show password"}
+                      >
+                        {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+                      </button>
+                    </div>
                   </div>
                   <Button type="submit" className="w-full h-11 font-bold" disabled={busy}>
                     {busy && <Loader2 className="size-4 animate-spin mr-2" />}
                     {mode === "signin" ? "Sign in to WarmBase" : "Create account"}
                   </Button>
                   <p className="text-xs text-muted-foreground text-center px-8">
-                    By clicking continue, you agree to our <button type="button" className="underline underline-offset-4 hover:text-primary">Terms of Service</button> and <button type="button" className="underline underline-offset-4 hover:text-primary">Privacy Policy</button>.
+                    By clicking continue, you agree to our <a href="/terms" className="underline underline-offset-4 hover:text-primary">Terms of Service</a> and <a href="/privacy" className="underline underline-offset-4 hover:text-primary">Privacy Policy</a>.
                   </p>
                 </form>
               </TabsContent>
