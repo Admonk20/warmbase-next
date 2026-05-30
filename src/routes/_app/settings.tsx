@@ -37,6 +37,7 @@ function Settings() {
   const qc = useQueryClient();
   const [profile, setProfile] = useState({ full_name: "", company: "", title: "" });
   const [keyForm, setKeyForm] = useState({ provider: "openai", value: "", label: "" });
+  const [showKey, setShowKey] = useState(false);
 
   const { data: prof } = useQuery({
     queryKey: ["profile"],
@@ -127,6 +128,25 @@ function Settings() {
               </Select>
             </div>
             <div className="space-y-1.5"><Label>Value</Label><Input type="password" value={keyForm.value} onChange={(e) => setKeyForm({ ...keyForm, value: e.target.value })} /></div>
+              <div className="space-y-1.5">
+                <Label>Value</Label>
+                <div className="relative">
+                  <Input
+                    className="pr-10"
+                    type={showKey ? "text" : "password"}
+                    value={keyForm.value}
+                    onChange={(e) => setKeyForm({ ...keyForm, value: e.target.value })}
+                  />
+                  <button
+                    type="button"
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-primary"
+                    onClick={() => setShowKey((s) => !s)}
+                    aria-label={showKey ? "Hide key" : "Show key"}
+                  >
+                    {showKey ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+                  </button>
+                </div>
+              </div>
             <div className="space-y-1.5"><Label>Label (optional)</Label><Input value={keyForm.label} onChange={(e) => setKeyForm({ ...keyForm, label: e.target.value })} placeholder="e.g. personal" /></div>
             <Button onClick={() => addKey.mutate()} disabled={addKey.isPending}>{addKey.isPending && <Loader2 className="size-4 animate-spin" />}<Plus className="size-4" /></Button>
           </div>

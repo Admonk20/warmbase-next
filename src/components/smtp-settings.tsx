@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Loader2, Save, Plug, CheckCircle2, AlertCircle, Send } from "lucide-react";
+import { Loader2, Save, Plug, CheckCircle2, AlertCircle, Send, Eye, EyeOff } from "lucide-react";
 import { getSmtpSettings, saveSmtpSettings, testSmtpConnection } from "@/lib/smtp.functions";
 import { sendEmail } from "@/lib/email.functions";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
@@ -33,6 +33,8 @@ export function SmtpSettingsCard() {
   const sendFn = useServerFn(sendEmail);
   const [form, setForm] = useState(empty);
   const [testTo, setTestTo] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [showImapPassword, setShowImapPassword] = useState(false);
 
   const { data } = useQuery({ queryKey: ["smtp"], queryFn: () => getFn() });
   useEffect(() => {
@@ -95,7 +97,26 @@ export function SmtpSettingsCard() {
             <div className="space-y-1.5 flex flex-col"><Label>SSL (465)</Label><Switch checked={form.secure} onCheckedChange={(v) => set({ secure: v })} /></div>
           </div>
           <div className="space-y-1.5"><Label>Username</Label><Input value={form.username} onChange={(e) => set({ username: e.target.value })} /></div>
-          <div className="space-y-1.5"><Label>Password / App password</Label><Input type="password" value={form.password} onChange={(e) => set({ password: e.target.value })} placeholder={data ? "(unchanged)" : ""} /></div>
+          <div className="space-y-1.5">
+            <Label>Password / App password</Label>
+            <div className="relative">
+              <Input
+                className="pr-10"
+                type={showPassword ? "text" : "password"}
+                value={form.password}
+                onChange={(e) => set({ password: e.target.value })}
+                placeholder={data ? "(unchanged)" : ""}
+              />
+              <button
+                type="button"
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-primary"
+                onClick={() => setShowPassword((s) => !s)}
+                aria-label={showPassword ? "Hide password" : "Show password"}
+              >
+                {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+              </button>
+            </div>
+          </div>
           <div className="space-y-1.5"><Label>From email</Label><Input type="email" value={form.from_email} onChange={(e) => set({ from_email: e.target.value })} /></div>
           <div className="space-y-1.5"><Label>From name</Label><Input value={form.from_name} onChange={(e) => set({ from_name: e.target.value })} /></div>
           <div className="space-y-1.5"><Label>Reply-to (optional)</Label><Input value={form.reply_to} onChange={(e) => set({ reply_to: e.target.value })} /></div>
@@ -115,7 +136,26 @@ export function SmtpSettingsCard() {
               <div className="space-y-1.5"><Label>IMAP host</Label><Input value={form.imap_host} onChange={(e) => set({ imap_host: e.target.value })} /></div>
               <div className="space-y-1.5"><Label>IMAP port</Label><Input type="number" value={form.imap_port} onChange={(e) => set({ imap_port: +e.target.value })} /></div>
               <div className="space-y-1.5"><Label>IMAP username</Label><Input value={form.imap_username} onChange={(e) => set({ imap_username: e.target.value })} /></div>
-              <div className="space-y-1.5"><Label>IMAP password</Label><Input type="password" value={form.imap_password} onChange={(e) => set({ imap_password: e.target.value })} placeholder={data?.imap_username ? "(unchanged)" : ""} /></div>
+              <div className="space-y-1.5">
+                <Label>IMAP password</Label>
+                <div className="relative">
+                  <Input
+                    className="pr-10"
+                    type={showImapPassword ? "text" : "password"}
+                    value={form.imap_password}
+                    onChange={(e) => set({ imap_password: e.target.value })}
+                    placeholder={data?.imap_username ? "(unchanged)" : ""}
+                  />
+                  <button
+                    type="button"
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-primary"
+                    onClick={() => setShowImapPassword((s) => !s)}
+                    aria-label={showImapPassword ? "Hide password" : "Show password"}
+                  >
+                    {showImapPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+                  </button>
+                </div>
+              </div>
             </div>
           )}
         </div>
