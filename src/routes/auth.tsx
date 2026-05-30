@@ -56,6 +56,7 @@ function AuthPage() {
         toast.success("Signed in");
       }
     } catch (err: any) {
+      console.error("Auth submit error:", err);
       toast.error(err?.message || "Something went wrong");
     } finally {
       setBusy(false);
@@ -82,6 +83,7 @@ function AuthPage() {
         }
       }
     } catch (err: any) {
+      console.error("Google sign-in error:", err);
       toast.error(err?.message || "Google sign-in failed");
     } finally {
       setBusy(false);
