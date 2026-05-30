@@ -15,4 +15,7 @@ export default defineConfig({
     tailwindcss(),
     tsconfigPaths(),
   ],
+  build: {
+    chunkSizeWarningLimit: 1024,
+  },
 });
