@@ -1,5 +1,3 @@
-declare module "../dist/server/server.js";
-
 import { fileURLToPath } from "node:url";
 import fs from "node:fs/promises";
 import path from "node:path";
