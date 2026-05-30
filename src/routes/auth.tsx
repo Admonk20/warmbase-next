@@ -72,9 +72,18 @@ function AuthPage() {
           redirectTo: window.location.origin,
         },
       });
-      if (error) throw error;
+      if (error) {
+        // Provide a clearer message when OAuth is misconfigured
+        const msg = error?.message || "Google sign-in failed";
+        if (msg.toLowerCase().includes("missing oauth") || msg.toLowerCase().includes("missing secret")) {
+          toast.error("Google OAuth is not configured in Supabase. Add the client ID & secret in Supabase > Auth > Providers.");
+        } else {
+          toast.error(msg);
+        }
+      }
     } catch (err: any) {
       toast.error(err?.message || "Google sign-in failed");
+    } finally {
       setBusy(false);
     }
   }
