@@ -11,7 +11,7 @@ export default defineConfig({
         entry: "src/server.ts",
       },
     }),
-    react(),
+    // react(), // Removed potentially conflicting plugin
     tailwindcss(),
     tsconfigPaths(),
   ],
@@ -19,3 +19,4 @@ export default defineConfig({
     chunkSizeWarningLimit: 1024,
   },
 });
+

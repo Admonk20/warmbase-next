@@ -56,8 +56,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         session,
         loading,
         signOut: async () => {
-          const supabase = await getBrowserSupabase();
-          await supabase.auth.signOut();
+          try {
+            const supabase = await getBrowserSupabase();
+            const { error } = await supabase.auth.signOut();
+            if (error) console.error("Sign out error:", error);
+          } catch (e) {
+            console.error("Sign out failed:", e);
+          } finally {
+            // Ensure local session state is cleared to avoid race conditions
+            // that can lead to aborted network calls during navigation.
+            setSession(null);
+          }
         },
       }}
     >

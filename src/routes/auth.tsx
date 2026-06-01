@@ -57,7 +57,19 @@ function AuthPage() {
       }
     } catch (err: any) {
       console.error("Auth submit error:", err);
-      toast.error(err?.message || "Something went wrong");
+      const raw = err?.message || String(err) || "Something went wrong";
+      const lowered = raw.toLowerCase();
+      let friendly = raw;
+      if (lowered.includes("weak") || lowered.includes("easy to guess")) {
+        friendly = "Password is too weak — choose a stronger password (min 8 characters, include numbers and symbols).";
+      } else if (lowered.includes("invalid") && lowered.includes("email")) {
+        friendly = "Please enter a valid email address.";
+      } else if (lowered.includes("duplicate") || lowered.includes("already")) {
+        friendly = "An account with this email already exists.";
+      } else if (lowered.includes("confirm") || lowered.includes("verify")) {
+        friendly = "Please verify your email address before signing in.";
+      }
+      toast.error(friendly);
     } finally {
       setBusy(false);
     }

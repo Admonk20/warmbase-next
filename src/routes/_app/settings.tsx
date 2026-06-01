@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Loader2, Save, Plus, Trash2, KeyRound } from "lucide-react";
+import { Loader2, Save, Plus, Trash2, KeyRound, Eye, EyeOff } from "lucide-react";
 import { getBrowserSupabase } from "@/integrations/supabase/browser-client";
 import { useAuth } from "@/hooks/use-auth";
 import { PageHeader } from "@/components/page-header";
@@ -121,35 +121,34 @@ function Settings() {
         <CardHeader><CardTitle className="text-base flex items-center gap-2"><KeyRound className="size-4" /> API keys</CardTitle></CardHeader>
         <CardContent className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-[200px_1fr_200px_auto] gap-2 items-end">
-            <div className="space-y-1.5"><Label>Provider</Label>
-              <Select value={keyForm.provider} onValueChange={(v) => setKeyForm({ ...keyForm, provider: v })}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>{PROVIDERS.map((p) => <SelectItem key={p.id} value={p.id}>{p.label}</SelectItem>)}</SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-1.5"><Label>Value</Label><Input type="password" value={keyForm.value} onChange={(e) => setKeyForm({ ...keyForm, value: e.target.value })} /></div>
-              <div className="space-y-1.5">
-                <Label>Value</Label>
-                <div className="relative">
-                  <Input
-                    className="pr-10"
-                    type={showKey ? "text" : "password"}
-                    value={keyForm.value}
-                    onChange={(e) => setKeyForm({ ...keyForm, value: e.target.value })}
-                  />
-                  <button
-                    type="button"
-                    className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-primary"
-                    onClick={() => setShowKey((s) => !s)}
-                    aria-label={showKey ? "Hide key" : "Show key"}
-                  >
-                    {showKey ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
-                  </button>
-                </div>
-              </div>
-            <div className="space-y-1.5"><Label>Label (optional)</Label><Input value={keyForm.label} onChange={(e) => setKeyForm({ ...keyForm, label: e.target.value })} placeholder="e.g. personal" /></div>
-            <Button onClick={() => addKey.mutate()} disabled={addKey.isPending}>{addKey.isPending && <Loader2 className="size-4 animate-spin" />}<Plus className="size-4" /></Button>
-          </div>
+                      <div className="space-y-1.5"><Label>Provider</Label>
+                        <Select value={keyForm.provider} onValueChange={(v) => setKeyForm({ ...keyForm, provider: v })}>
+                          <SelectTrigger><SelectValue /></SelectTrigger>
+                          <SelectContent>{PROVIDERS.map((p) => <SelectItem key={p.id} value={p.id}>{p.label}</SelectItem>)}</SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label>Value</Label>
+                        <div className="relative">
+                          <Input
+                            className="pr-10"
+                            type={showKey ? "text" : "password"}
+                            value={keyForm.value}
+                            onChange={(e) => setKeyForm({ ...keyForm, value: e.target.value })}
+                          />
+                          <button
+                            type="button"
+                            className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-primary"
+                            onClick={() => setShowKey((s) => !s)}
+                            aria-label={showKey ? "Hide key" : "Show key"}
+                          >
+                            {showKey ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+                          </button>
+                        </div>
+                      </div>
+                      <div className="space-y-1.5"><Label>Label (optional)</Label><Input value={keyForm.label} onChange={(e) => setKeyForm({ ...keyForm, label: e.target.value })} placeholder="e.g. personal" /></div>
+                      <Button onClick={() => addKey.mutate()} disabled={addKey.isPending}>{addKey.isPending && <Loader2 className="size-4 animate-spin" />}<Plus className="size-4" /></Button>
+                    </div>
           <p className="text-xs text-muted-foreground">{PROVIDERS.find((p) => p.id === keyForm.provider)?.desc}</p>
 
           {keys?.length ? (
@@ -164,7 +163,7 @@ function Settings() {
               ))}
             </div>
           ) : (
-            <p className="text-sm text-muted-foreground">No keys yet. The app works without keys — AI uses the Lovable AI Gateway, and email sends via your own SMTP (configure it in the SMTP tab above). Resend is only an optional fallback.</p>
+            <p className="text-sm text-muted-foreground">No keys yet. The app works without keys — AI can fall back to the built-in gateway, and email sends via your own SMTP (configure it in the SMTP tab above). Resend is only an optional fallback.</p>
           )}
         </CardContent>
       </Card>

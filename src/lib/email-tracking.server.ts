@@ -65,6 +65,6 @@ export function getAppBaseUrl(): string {
   return (
     process.env.APP_BASE_URL ||
     process.env.VITE_APP_URL ||
-    "https://project--8e39473a-9102-4288-9c39-e295cfde40b7.lovable.app"
+    "http://localhost:4173"
   );
 }
