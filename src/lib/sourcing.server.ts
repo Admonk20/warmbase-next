@@ -1,5 +1,5 @@
-// Server-only sourcing pipeline. Uses Firecrawl search/scrape plus AI extraction.
-import Firecrawl from "@mendable/firecrawl-js";
+// Server-only sourcing pipeline. Uses Playwright search/scrape plus AI extraction.
+import { playwrightSearch as runPlaywrightSearch } from "./playwright.service";
 
 const GENERIC_EMAIL_PREFIXES = new Set([
   "admin",
@@ -13,16 +13,6 @@ const GENERIC_EMAIL_PREFIXES = new Set([
   "support",
   "team",
 ]);
-
-export function getFirecrawl() {
-  const apiKey = process.env.FIRECRAWL_API_KEY;
-  if (!apiKey) {
-    throw new Error(
-      "Firecrawl is not connected. Open Connectors and connect Firecrawl to enable lead sourcing.",
-    );
-  }
-  return new Firecrawl({ apiKey });
-}
 
 export type IcpInput = {
   titles: string[];
@@ -72,26 +62,14 @@ export type RawSearchHit = {
   markdown?: string;
 };
 
-export async function firecrawlSearch(
-  fc: ReturnType<typeof getFirecrawl>,
-  query: string,
-  limit: number,
-): Promise<RawSearchHit[]> {
-  const res = await fc.search(query, {
-    limit,
-    scrapeOptions: { formats: ["markdown"], onlyMainContent: true },
-  });
-  const anyRes = res as unknown as {
-    web?: Array<{ url?: string; title?: string; description?: string; markdown?: string }>;
-    data?: Array<{ url?: string; title?: string; description?: string; markdown?: string }>;
-  };
-  const list = anyRes.web ?? anyRes.data ?? [];
-  return list
+export async function playwrightSearch(query: string, limit: number): Promise<RawSearchHit[]> {
+  const results = await runPlaywrightSearch(query, limit);
+  return results
     .filter((r) => r.url)
     .map((r) => ({
-      url: r.url!,
+      url: r.url,
       title: r.title,
-      description: r.description,
+      description: r.snippet,
       markdown: r.markdown,
     }));
 }

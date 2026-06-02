@@ -1,0 +1,53 @@
+name: Build and Publish Playwright Docker
+
+on:
+  push:
+    branches: [ main ]
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v2
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Log in to GitHub Container Registry
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: echo "${GITHUB_TOKEN}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          file: Dockerfile.playwright
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository_owner }}/warmbase-playwright:latest
+            ghcr.io/${{ github.repository_owner }}/warmbase-playwright:${{ github.sha }}
+
+      - name: Optional: Deploy to Railway (automated)
+        if: ${{ secrets.RAILWAY_API_KEY && secrets.RAILWAY_PROJECT_ID && secrets.RAILWAY_SERVICE_ID }}
+        env:
+          RAILWAY_API_KEY: ${{ secrets.RAILWAY_API_KEY }}
+          RAILWAY_PROJECT_ID: ${{ secrets.RAILWAY_PROJECT_ID }}
+          RAILWAY_SERVICE_ID: ${{ secrets.RAILWAY_SERVICE_ID }}
+        run: |
+          echo "Railway credentials present — installing Railway CLI"
+          npm install -g @railway/cli || true
+          echo "Logging into Railway"
+          railway login --apiKey "$RAILWAY_API_KEY" || true
+          echo "Deploying service $RAILWAY_SERVICE_ID in project $RAILWAY_PROJECT_ID"
+          # The following command deploys the current workspace to the specified Railway service.
+          # It requires that the Railway service already exists and the project/service IDs are correct.
+          railway up --project "$RAILWAY_PROJECT_ID" --service "$RAILWAY_SERVICE_ID" --detach || true

@@ -112,7 +112,7 @@ function SourcingPage() {
     <div className="p-6 max-w-7xl mx-auto space-y-5">
       <PageHeader
         title="Sourcing"
-        description="Describe your ideal customer. We search the web, extract real people, and score them against your offer."
+        description="Describe your ideal customer. We search the web with Playwright, extract real people, and score them against your offer."
       />
 
       <div className="grid grid-cols-1 lg:grid-cols-[400px_1fr] gap-5">
@@ -137,7 +137,7 @@ function SourcingPage() {
               {startRun.isPending ? <Loader2 className="size-4 animate-spin" /> : <Play className="size-4" />} Start sourcing
             </Button>
             <p className="text-xs text-muted-foreground">
-              Runs on Firecrawl + AI. Up to {icp.limit} researched leads per run.
+              Runs on Playwright + AI. Up to {icp.limit} researched leads per run.
             </p>
           </CardContent>
         </Card>

@@ -2,20 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { assertSafeDomain, assertSafeUrl } from "./url-guard";
-
-async function firecrawlScrape(url: string): Promise<{ markdown?: string; title?: string }> {
-  const key = process.env.FIRECRAWL_API_KEY;
-  if (!key) throw new Error("Firecrawl API key not configured.");
-  const res = await fetch("https://api.firecrawl.dev/v1/scrape", {
-    method: "POST",
-    headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
-    body: JSON.stringify({ url, formats: ["markdown"], onlyMainContent: true }),
-    signal: AbortSignal.timeout(15000),
-  });
-  if (!res.ok) throw new Error(`Firecrawl ${res.status}`);
-  const j = (await res.json()) as { data?: { markdown?: string; metadata?: { title?: string } } };
-  return { markdown: j.data?.markdown, title: j.data?.metadata?.title };
-}
+import { playwrightScrape } from "./playwright.service";
 
 function domainFromEmail(email?: string | null): string | null {
   if (!email) return null;
@@ -78,7 +65,7 @@ async function scrapeCompanyPages(domain: string) {
   for (const path of paths) {
     try {
       const url = `https://${domain}${path}`;
-      const scrape = await firecrawlScrape(url);
+      const scrape = await playwrightScrape(url);
       if (scrape.markdown) {
         pages.push({ url, title: scrape.title, markdown: scrape.markdown });
       }
@@ -144,7 +131,7 @@ export const enrichLeadLinkedIn = createServerFn({ method: "POST" })
       throw new Error("Invalid LinkedIn URL");
     }
 
-    const scrape = await firecrawlScrape(u.toString());
+    const scrape = await playwrightScrape(u.toString());
     const md = scrape.markdown ?? "";
     const cleanLines = lines(md);
     const headline = cleanLines[0] ?? scrape.title ?? null;
