@@ -18,13 +18,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     let mounted = true;
     let unsubscribe: (() => void) | undefined;
+    console.debug('[useAuth] effect mounted');
 
     void (async () => {
+      console.debug('[useAuth] initializing auth');
       try {
         const supabase = await getBrowserSupabase();
+        console.debug('[useAuth] got supabase', !!supabase);
         if (!mounted) return;
 
         const { data: sub } = supabase.auth.onAuthStateChange((_e, s) => {
+          console.debug('[useAuth] onAuthStateChange', s);
           if (!mounted) return;
           setSession(s);
           setLoading(false);
@@ -33,17 +37,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         unsubscribe = () => sub.subscription.unsubscribe();
 
         const { data } = await supabase.auth.getSession();
+        console.debug('[useAuth] getSession result', data);
         if (!mounted) return;
 
         setSession(data.session);
         setLoading(false);
       } catch (error) {
-        console.error(error);
+        console.error('[useAuth] error', error);
         if (mounted) setLoading(false);
       }
     })();
 
     return () => {
+      console.debug('[useAuth] cleanup');
       mounted = false;
       unsubscribe?.();
     };
@@ -56,13 +62,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         session,
         loading,
         signOut: async () => {
+          console.debug('[useAuth] signOut start');
           try {
             const supabase = await getBrowserSupabase();
             const { error } = await supabase.auth.signOut();
-            if (error) console.error("Sign out error:", error);
+            if (error) console.error('Sign out error:', error);
           } catch (e) {
-            console.error("Sign out failed:", e);
+            console.error('Sign out failed:', e);
           } finally {
+            console.debug('[useAuth] signOut: clearing session');
             // Ensure local session state is cleared to avoid race conditions
             // that can lead to aborted network calls during navigation.
             setSession(null);
