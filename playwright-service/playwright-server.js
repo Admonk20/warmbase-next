@@ -4,6 +4,35 @@ import { chromium } from 'playwright';
 const app = express();
 app.use(express.json({ limit: '100kb' }));
 
+const PORT = process.env.PORT || 3001;
+const API_KEY = process.env.PLAYWRIGHT_API_KEY || null;
+const MAX_CONCURRENT_PAGES = parseInt(process.env.MAX_CONCURRENT_PAGES || '2', 10);
+
+let browserInstance = null;
+let browserLaunching = false;
+let activePages = 0;
+
+async function ensureBrowser() {
+  if (browserInstance) return browserInstance;
+  if (browserLaunching) {
+    // wait for browser to launch
+    while (browserLaunching && !browserInstance) {
+      await new Promise((r) => setTimeout(r, 50));
+    }
+    return browserInstance;
+  }
+
+  browserLaunching = true;
+  try {
+    browserInstance = await chromium.launch({ args: ['--no-sandbox', '--disable-setuid-sandbox'] });
+    return browserInstance;
+  } finally {
+    browserLaunching = false;
+  }
+}
+
+app.get('/healthz', (_req, res) => res.json({ status: 'ok' }));
+
 // Simple in-memory rate limiter (per-IP)
 function createLimiter({ windowMs = 60000, max = 10 } = {}) {
   const hits = new Map();
@@ -38,36 +67,6 @@ const limiter = createLimiter({
   windowMs: Number(process.env.RATE_LIMIT_WINDOW_MS || 60000),
   max: Number(process.env.RATE_LIMIT_MAX || 10),
 });
-
-const PORT = process.env.PORT || 3001;
-const API_KEY = process.env.PLAYWRIGHT_API_KEY || null;
-const MAX_CONCURRENT_PAGES = parseInt(process.env.MAX_CONCURRENT_PAGES || '2', 10);
-
-let browserInstance = null;
-let browserLaunching = false;
-let activePages = 0;
-
-async function ensureBrowser() {
-  if (browserInstance) return browserInstance;
-  if (browserLaunching) {
-    // wait for browser to launch
-    while (browserLaunching && !browserInstance) {
-      // simple busy wait - in practice this is short; alternative is an event/promise
-      await new Promise((r) => setTimeout(r, 50));
-    }
-    return browserInstance;
-  }
-
-  browserLaunching = true;
-  try {
-    browserInstance = await chromium.launch({ args: ['--no-sandbox', '--disable-setuid-sandbox'] });
-    return browserInstance;
-  } finally {
-    browserLaunching = false;
-  }
-}
-
-app.get('/healthz', (_req, res) => res.json({ status: 'ok' }));
 
 app.post('/screenshot', limiter, async (req, res) => {
   if (API_KEY) {

@@ -1,12 +1,13 @@
 FROM mcr.microsoft.com/playwright:focal
 
-# Install app dependencies
+# Install app dependencies (only the minimal package.json for this service)
 WORKDIR /usr/src/app
-COPY package*.json ./
+COPY playwright-service/package.json ./package.json
 RUN npm ci --production
 
 # Copy server
 COPY playwright-server.js ./
 
+ENV PORT=3001
 EXPOSE 3001
 CMD ["node", "playwright-server.js"]
