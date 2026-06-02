@@ -11,7 +11,7 @@ export default defineConfig({
         entry: "src/server.ts",
       },
     }),
-    // react(), // Removed potentially conflicting plugin
+    react(),
     tailwindcss(),
     tsconfigPaths(),
   ],
