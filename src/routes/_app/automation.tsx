@@ -32,14 +32,23 @@ function AutomationPage() {
         .maybeSingle();
 
       if (error) throw error;
-      return (data as any) || {
-        enabled: false,
-        icp: { titles: [], industries: [], geos: [], keywords: [], service: "", limit: 10 },
-        sender_name: "",
-        sender_company: "",
-        sender_title: "",
-        services_offered: "",
-        daily_lead_limit: 20
+      const base = (data as any) || {};
+      return {
+        enabled: !!base.enabled,
+        icp: {
+          titles: Array.isArray(base?.icp?.titles) ? base.icp.titles : [],
+          industries: Array.isArray(base?.icp?.industries) ? base.icp.industries : [],
+          geos: Array.isArray(base?.icp?.geos) ? base.icp.geos : [],
+          keywords: Array.isArray(base?.icp?.keywords) ? base.icp.keywords : [],
+          size: base?.icp?.size || "",
+          service: base?.icp?.service || "",
+          limit: Number(base?.icp?.limit ?? base?.daily_lead_limit ?? 20),
+        },
+        sender_name: base?.sender_name || "",
+        sender_company: base?.sender_company || "",
+        sender_title: base?.sender_title || "",
+        services_offered: base?.services_offered || "",
+        daily_lead_limit: Number(base?.daily_lead_limit ?? 20),
       };
     }
   });
@@ -130,20 +139,28 @@ function AutomationPage() {
               <form className="space-y-6 relative" onSubmit={(e) => {
                 e.preventDefault();
                 const formData = new FormData(e.currentTarget);
+                const parsedLimit = Math.min(40, Math.max(5, Number(formData.get("limit")) || 20));
                 const newConfig = {
                   ...config,
                   sender_name: formData.get("name") as string,
                   sender_company: formData.get("company") as string,
+                  sender_title: formData.get("sender_title") as string,
                   services_offered: formData.get("services") as string,
+                  daily_lead_limit: parsedLimit,
                   icp: {
                     ...config.icp,
+                    service: (formData.get("services") as string) || "",
                     titles: (formData.get("titles") as string).split(",").map(s => s.trim()).filter(Boolean),
-                    industries: (formData.get("industries") as string).split(",").map(s => s.trim()).filter(Boolean)
+                    industries: (formData.get("industries") as string).split(",").map(s => s.trim()).filter(Boolean),
+                    geos: (formData.get("geos") as string).split(",").map(s => s.trim()).filter(Boolean),
+                    keywords: (formData.get("keywords") as string).split(",").map(s => s.trim()).filter(Boolean),
+                    size: (formData.get("size") as string).trim(),
+                    limit: parsedLimit,
                   }
                 };
                 updateConfig.mutate(newConfig);
               }}>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div className="space-y-2">
                     <Label>Your Name</Label>
                     <Input name="name" defaultValue={config?.sender_name} placeholder="e.g. John Doe" />
@@ -151,6 +168,10 @@ function AutomationPage() {
                   <div className="space-y-2">
                     <Label>Company Name</Label>
                     <Input name="company" defaultValue={config?.sender_company} placeholder="e.g. WarmBase AI" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Your Title</Label>
+                    <Input name="sender_title" defaultValue={config?.sender_title} placeholder="e.g. Founder" />
                   </div>
                 </div>
                 <div className="space-y-2">
@@ -170,6 +191,22 @@ function AutomationPage() {
                   <div className="space-y-2">
                     <Label>Industries (comma separated)</Label>
                     <Input name="industries" defaultValue={config?.icp?.industries?.join(", ")} placeholder="SaaS, E-commerce, Logistics" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Geographies (comma separated)</Label>
+                    <Input name="geos" defaultValue={config?.icp?.geos?.join(", ")} placeholder="United States, Germany" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Keywords (comma separated)</Label>
+                    <Input name="keywords" defaultValue={config?.icp?.keywords?.join(", ")} placeholder="hiring, scaling, outbound" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Company Size</Label>
+                    <Input name="size" defaultValue={config?.icp?.size || ""} placeholder="e.g. 11-50" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Lead Limit / Run</Label>
+                    <Input name="limit" type="number" min={5} max={40} defaultValue={config?.icp?.limit ?? config?.daily_lead_limit ?? 20} />
                   </div>
                 </div>
                 <div className="flex gap-2 justify-end pt-4">
@@ -200,12 +237,18 @@ function AutomationPage() {
                     <div className="space-y-1">
                       <p className="text-base font-semibold">{config?.sender_name || "Unset"}</p>
                       <p className="text-sm opacity-50">{config?.sender_company || "Unset"}</p>
+                      <p className="text-xs opacity-40">{config?.sender_title || "Title unset"}</p>
                     </div>
                   </div>
                 </div>
                 <div className="p-5 rounded-2xl bg-white/5 border border-white/5 space-y-3">
                    <h4 className="text-[10px] font-bold uppercase tracking-widest text-purple-400">Offer Reasoning</h4>
                    <p className="text-sm leading-relaxed opacity-70 italic font-medium">"{config?.services_offered || "Add your service description to start autonomous outreach."}"</p>
+                   <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-2">
+                     <p className="text-xs opacity-60"><span className="opacity-40">Geos:</span> {config?.icp?.geos?.join(", ") || "Any"}</p>
+                     <p className="text-xs opacity-60"><span className="opacity-40">Keywords:</span> {config?.icp?.keywords?.join(", ") || "None"}</p>
+                     <p className="text-xs opacity-60"><span className="opacity-40">Size / Limit:</span> {(config?.icp?.size || "Any")} / {config?.icp?.limit ?? config?.daily_lead_limit ?? 20}</p>
+                   </div>
                 </div>
               </div>
             )}
