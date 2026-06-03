@@ -11,12 +11,16 @@ export const recomputeScores = createServerFn({ method: "POST" })
     return { ok: true, leads: n };
   });
 
+export const recomputeOneInternal = async ({ data, context }: { data: { leadId: string }, context: { supabase: any } }) => {
+  const s = await recomputeLeadScore(context.supabase, data.leadId);
+  return { ok: true, score: s };
+};
+
 export const recomputeOne = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator(z.object({ leadId: z.string().uuid() }).parse)
   .handler(async ({ data, context }) => {
-    const s = await recomputeLeadScore(context.supabase, data.leadId);
-    return { ok: true, score: s };
+    return recomputeOneInternal({ data, context });
   });
 
 const REPLY_LABELS = ["interested","not_now","unsubscribe","ooo","wrong_person","question","neutral"] as const;
