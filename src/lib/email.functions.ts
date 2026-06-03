@@ -1,14 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { chatCompletion, getUserOpenAIKey, getUserKimiKey, getUserClaudeKey, getUserKey } from "./ai.server";
-import {
-  getAppBaseUrl,
-  htmlFromText,
-  newMessageId,
-  newUnsubToken,
-  wrapBody,
-} from "./email-tracking.server";
 
 const STAGE_CONTEXT: Record<string, { goal: string; tone: string; cta: string }> = {
   new: {
@@ -50,6 +42,83 @@ const researchObjectSchema = z.object({
   evidence: z.array(z.string()).optional(),
 });
 
+export const draftEmailInternal = async ({ data, context }: {
+  data: {
+    lead: {
+      contact?: string;
+      company?: string;
+      title?: string;
+      email?: string;
+      niche?: string;
+      notes?: string;
+      status?: string;
+    };
+    service?: string;
+    research?: any;
+    suggestedService?: string;
+    sender?: {
+      yourName?: string;
+      yourCompany?: string;
+      yourTitle?: string;
+    };
+  },
+  context: { supabase: any, userId: string }
+}) => {
+  const { lead, service, research, suggestedService, sender } = data;
+  const stage = (lead.status as keyof typeof STAGE_CONTEXT) ?? "new";
+  const sx = STAGE_CONTEXT[stage] ?? STAGE_CONTEXT.new;
+  const firstName = (lead.contact ?? "there").split(" ")[0];
+
+  const { data: prof } = await context.supabase
+    .from("profiles")
+    .select("ai_email_instructions")
+    .eq("id", context.userId)
+    .maybeSingle();
+  const customInstructions = ((prof as any)?.ai_email_instructions ?? "").trim();
+
+  const userService = service?.trim();
+  const chosenService = userService || suggestedService?.trim() || "";
+  const serviceLine = userService
+    ? `Pitch THIS service exactly: ${userService}`
+    : chosenService
+      ? `Pitch this service: ${chosenService}`
+      : `Pick the best service for this person.`;
+
+  let researchBlock = "—";
+  if (typeof research === "string") {
+    researchBlock = research;
+  } else if (research && typeof research === "object") {
+    const parts: string[] = [];
+    if (research.summary) parts.push(`Summary: ${research.summary}`);
+    if (research.pains?.length) parts.push(`Pains: ${research.pains.join(", ")}`);
+    if (research.opportunities?.length) parts.push(`Opportunities: ${research.opportunities.join(", ")}`);
+    if (parts.length) researchBlock = parts.join("\n\n");
+  }
+
+  const sys = `You are an elite cold email copywriter for WarmBase. Focus on being human, direct, and under 110 words. No corporate buzzwords.`;
+  const prompt = `Write a cold email to ${firstName} at ${lead.company ?? "?"}.\n\nRESEARCH:\n${researchBlock}\n\nSERVICE:\n${serviceLine}\n\nStage: ${stage}\n${customInstructions ? `Instructions: ${customInstructions}` : ""}`;
+
+  const { chatWithUserKeys } = await import("./ai-wrapper.server");
+  const text = await chatWithUserKeys({
+    supabase: context.supabase,
+    userId: context.userId,
+    messages: [{ role: "system", content: sys }, { role: "user", content: prompt }],
+    json: true,
+    temperature: 0.85,
+  });
+
+  try {
+    const parsed = JSON.parse(text);
+    return {
+      subject: String(parsed.subject ?? ""),
+      body: String(parsed.body ?? ""),
+      service_pitched: String(parsed.service_pitched ?? chosenService),
+    };
+  } catch {
+    return { subject: "", body: text, service_pitched: chosenService };
+  }
+};
+
 export const draftEmail = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator(
@@ -76,65 +145,7 @@ export const draftEmail = createServerFn({ method: "POST" })
     }).parse,
   )
   .handler(async ({ data, context }) => {
-    const { lead, service, research, suggestedService, sender } = data;
-    const stage = (lead.status as keyof typeof STAGE_CONTEXT) ?? "new";
-    const sx = STAGE_CONTEXT[stage] ?? STAGE_CONTEXT.new;
-    const firstName = (lead.contact ?? "there").split(" ")[0];
-
-    const { data: prof } = await context.supabase
-      .from("profiles")
-      .select("ai_email_instructions")
-      .eq("id", context.userId)
-      .maybeSingle();
-    const customInstructions = ((prof as any)?.ai_email_instructions ?? "").trim();
-
-    const userService = service?.trim();
-    const chosenService = userService || suggestedService?.trim() || "";
-    const serviceLine = userService
-      ? `Pitch THIS service exactly: ${userService}`
-      : chosenService
-        ? `Pitch this service: ${chosenService}`
-        : `Pick the best service for this person.`;
-
-    let researchBlock = "—";
-    if (typeof research === "string") {
-      researchBlock = research;
-    } else if (research && typeof research === "object") {
-      const parts: string[] = [];
-      if (research.summary) parts.push(`Summary: ${research.summary}`);
-      if (research.pains?.length) parts.push(`Pains: ${research.pains.join(", ")}`);
-      if (research.opportunities?.length) parts.push(`Opportunities: ${research.opportunities.join(", ")}`);
-      if (parts.length) researchBlock = parts.join("\n\n");
-    }
-
-    const sys = `You are an elite cold email copywriter for WarmBase. Focus on being human, direct, and under 110 words. No corporate buzzwords.`;
-    const prompt = `Write a cold email to ${firstName} at ${lead.company ?? "?"}.\n\nRESEARCH:\n${researchBlock}\n\nSERVICE:\n${serviceLine}\n\nStage: ${stage}\n${customInstructions ? `Instructions: ${customInstructions}` : ""}`;
-
-    const [openaiKey, kimiKey, claudeKey] = await Promise.all([
-      getUserOpenAIKey(context.supabase, context.userId),
-      getUserKimiKey(context.supabase, context.userId),
-      getUserClaudeKey(context.supabase, context.userId),
-    ]);
-
-    const text = await chatCompletion({
-      messages: [{ role: "system", content: sys }, { role: "user", content: prompt }],
-      openaiKey,
-      kimiKey,
-      claudeKey,
-      json: true,
-      temperature: 0.85,
-    });
-
-    try {
-      const parsed = JSON.parse(text);
-      return {
-        subject: String(parsed.subject ?? ""),
-        body: String(parsed.body ?? ""),
-        service_pitched: String(parsed.service_pitched ?? chosenService),
-      };
-    } catch {
-      return { subject: "", body: text, service_pitched: chosenService };
-    }
+    return draftEmailInternal({ data, context });
   });
 
 export const subjectLines = createServerFn({ method: "POST" })
@@ -148,16 +159,11 @@ export const subjectLines = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const sys = `Generate 5 alternative subject lines for this cold email. Return JSON: {"subjects": []}`;
     const prompt = `Email body:\n${data.body}`;
-    const [openaiKey, kimiKey, claudeKey] = await Promise.all([
-      getUserOpenAIKey(context.supabase, context.userId),
-      getUserKimiKey(context.supabase, context.userId),
-      getUserClaudeKey(context.supabase, context.userId),
-    ]);
-    const out = await chatCompletion({
+    const { chatWithUserKeys } = await import("./ai-wrapper.server");
+    const out = await chatWithUserKeys({
+      supabase: context.supabase,
+      userId: context.userId,
       messages: [{ role: "system", content: sys }, { role: "user", content: prompt }],
-      openaiKey,
-      kimiKey,
-      claudeKey,
       json: true,
       temperature: 0.9,
     });
@@ -181,16 +187,11 @@ export const draftReply = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const sys = `Write a professional sales reply. Under 80 words.`;
     const prompt = `Lead email:\n${data.inboundEmail}`;
-    const [openaiKey, kimiKey, claudeKey] = await Promise.all([
-      getUserOpenAIKey(context.supabase, context.userId),
-      getUserKimiKey(context.supabase, context.userId),
-      getUserClaudeKey(context.supabase, context.userId),
-    ]);
-    const body = await chatCompletion({
+    const { chatWithUserKeys } = await import("./ai-wrapper.server");
+    const body = await chatWithUserKeys({
+      supabase: context.supabase,
+      userId: context.userId,
       messages: [{ role: "system", content: sys }, { role: "user", content: prompt }],
-      openaiKey,
-      kimiKey,
-      claudeKey,
       temperature: 0.7,
     });
     return { body };
@@ -212,16 +213,11 @@ export const personalizeBatch = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const sys = `Write one personalized opening line for each lead. Return JSON: {"openers": [{"id":"...","opener":"..."}]}`;
     const prompt = `Offer: ${data.offer ?? "B2B services"}\nLeads: ${JSON.stringify(data.leads)}`;
-    const [openaiKey, kimiKey, claudeKey] = await Promise.all([
-      getUserOpenAIKey(context.supabase, context.userId),
-      getUserKimiKey(context.supabase, context.userId),
-      getUserClaudeKey(context.supabase, context.userId),
-    ]);
-    const out = await chatCompletion({
+    const { chatWithUserKeys } = await import("./ai-wrapper.server");
+    const out = await chatWithUserKeys({
+      supabase: context.supabase,
+      userId: context.userId,
       messages: [{ role: "system", content: sys }, { role: "user", content: prompt }],
-      openaiKey,
-      kimiKey,
-      claudeKey,
       json: true,
     });
     try {
@@ -231,6 +227,54 @@ export const personalizeBatch = createServerFn({ method: "POST" })
       return { openers: [] };
     }
   });
+
+export const sendEmailInternal = async ({ data, context }: {
+  data: {
+    to: string;
+    subject: string;
+    body: string;
+    leadId?: string;
+    fromName?: string;
+    fromEmail?: string;
+  },
+  context: { supabase: any, userId: string }
+}) => {
+  const { data: smtpRow } = await context.supabase
+    .from("user_smtp_settings")
+    .select("*")
+    .eq("user_id", context.userId)
+    .maybeSingle();
+
+  if (smtpRow) {
+    const { smtpSend } = await import("./smtp.server");
+    const { htmlFromText, newMessageId } = await import("./email-tracking-wrapper.server");
+    const res = await smtpSend(smtpRow as any, {
+      to: data.to,
+      subject: data.subject,
+      html: htmlFromText(data.body),
+      text: data.body,
+      messageId: newMessageId(),
+    });
+    return { ok: true, id: res.id };
+  } else {
+    const { getUserProviderKey } = await import("./ai-wrapper.server");
+    const resendKey = await getUserProviderKey(context.supabase, context.userId, "resend");
+    if (!resendKey) throw new Error("No sender configured.");
+    
+    const res = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${resendKey}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        from: `${data.fromName ?? "WarmBase"} <${data.fromEmail ?? "onboarding@resend.dev"}>`,
+        to: [data.to],
+        subject: data.subject,
+        text: data.body,
+      }),
+    });
+    const out = await res.json() as { id?: string };
+    return { ok: true, id: out.id };
+  }
+};
 
 export const sendEmail = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -245,37 +289,5 @@ export const sendEmail = createServerFn({ method: "POST" })
     }).parse,
   )
   .handler(async ({ data, context }) => {
-    const { data: smtpRow } = await context.supabase
-      .from("user_smtp_settings")
-      .select("*")
-      .eq("user_id", context.userId)
-      .maybeSingle();
-
-    if (smtpRow) {
-      const { smtpSend } = await import("./smtp.server");
-      const res = await smtpSend(smtpRow as any, {
-        to: data.to,
-        subject: data.subject,
-        html: htmlFromText(data.body),
-        text: data.body,
-        messageId: newMessageId(),
-      });
-      return { ok: true, id: res.id };
-    } else {
-      const resendKey = await getUserKey(context.supabase, context.userId, "resend");
-      if (!resendKey) throw new Error("No sender configured.");
-      
-      const res = await fetch("https://api.resend.com/emails", {
-        method: "POST",
-        headers: { Authorization: `Bearer ${resendKey}`, "Content-Type": "application/json" },
-        body: JSON.stringify({
-          from: `${data.fromName ?? "WarmBase"} <${data.fromEmail ?? "onboarding@resend.dev"}>`,
-          to: [data.to],
-          subject: data.subject,
-          text: data.body,
-        }),
-      });
-      const out = await res.json() as { id?: string };
-      return { ok: true, id: out.id };
-    }
+    return sendEmailInternal({ data, context });
   });
