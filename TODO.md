@@ -2,4 +2,8 @@
 - [x] Update automation read-only summary to display new ICP/search fields
 - [x] Add /search and /scrape endpoints to playwright-service/playwright-server.js
 - [ ] (If needed) align proxy support for search/scrape paths
+- [ ] Replace hardcoded automation metrics with computed real run metrics
+- [ ] Add near-real-time polling for automation config and runs
+- [ ] Improve run activity cards with richer status/counts/timestamps
+- [ ] Improve Agent Logs panel to reflect latest run with status-aware empty states
 - [ ] Run validation checks (type/lint or targeted smoke check) and summarize

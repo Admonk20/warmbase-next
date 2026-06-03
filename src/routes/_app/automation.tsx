@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Play, Pause, Settings, Zap, Target, Search, Mail, History, CheckCircle2, XCircle, Loader2, Users } from "lucide-react";
 import { getBrowserSupabase } from "@/integrations/supabase/browser-client";
 import { PageHeader } from "@/components/page-header";
@@ -20,6 +20,7 @@ function AutomationPage() {
 
   const { data: config, isLoading: configLoading } = useQuery({
     queryKey: ["automation-config"],
+    refetchInterval: 15000,
     queryFn: async () => {
       const supabase = await getBrowserSupabase();
       const { data: user } = await supabase.auth.getUser();
@@ -55,6 +56,7 @@ function AutomationPage() {
 
   const { data: runs } = useQuery({
     queryKey: ["automation-runs"],
+    refetchInterval: 10000,
     queryFn: async () => {
       const supabase = await getBrowserSupabase();
       const { data, error } = await supabase
@@ -89,8 +91,43 @@ function AutomationPage() {
   });
 
   const toggleAutomation = () => {
-    updateConfig.mutate({ ...config, enabled: !config?.enabled });
+    const safeConfig = config ?? {
+      enabled: false,
+      icp: { titles: [], industries: [], geos: [], keywords: [], size: "", service: "", limit: 20 },
+      sender_name: "",
+      sender_company: "",
+      sender_title: "",
+      services_offered: "",
+      daily_lead_limit: 20,
+    };
+    updateConfig.mutate({ ...safeConfig, enabled: !safeConfig.enabled });
   };
+
+  const metrics = useMemo(() => {
+    const safeRuns = runs ?? [];
+    const totals = safeRuns.reduce(
+      (acc, run: any) => {
+        acc.leads += Number(run?.leads_sourced ?? 0);
+        acc.sent += Number(run?.emails_sent ?? 0);
+        acc.researched += Number(run?.leads_researched ?? 0);
+        return acc;
+      },
+      { leads: 0, sent: 0, researched: 0 }
+    );
+
+    const latest = safeRuns[0];
+    const active = safeRuns.find((r: any) => r?.status === "running");
+
+    return {
+      totals,
+      latest,
+      active,
+      completedCount: safeRuns.filter((r: any) => r?.status === "completed").length,
+      failedCount: safeRuns.filter((r: any) => r?.status === "failed").length,
+    };
+  }, [runs]);
+
+  const latestLogs: string[] = Array.isArray(metrics.latest?.logs) ? metrics.latest.logs : [];
 
   if (configLoading) {
     return <div className="p-6 flex justify-center py-20"><Loader2 className="size-8 animate-spin text-emerald-500" /></div>;
@@ -148,7 +185,7 @@ function AutomationPage() {
                   services_offered: formData.get("services") as string,
                   daily_lead_limit: parsedLimit,
                   icp: {
-                    ...config.icp,
+                    ...(config?.icp ?? { titles: [], industries: [], geos: [], keywords: [], size: "", service: "", limit: 20 }),
                     service: (formData.get("services") as string) || "",
                     titles: (formData.get("titles") as string).split(",").map(s => s.trim()).filter(Boolean),
                     industries: (formData.get("industries") as string).split(",").map(s => s.trim()).filter(Boolean),
@@ -269,7 +306,7 @@ function AutomationPage() {
                   </div>
                   <div>
                     <p className="text-[10px] uppercase tracking-wider opacity-40 font-bold">New Leads</p>
-                    <p className="text-xl font-bold tracking-tighter">42</p>
+                    <p className="text-xl font-bold tracking-tighter">{metrics.totals.leads}</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-3">
@@ -278,7 +315,7 @@ function AutomationPage() {
                   </div>
                   <div>
                     <p className="text-[10px] uppercase tracking-wider opacity-40 font-bold">Sent</p>
-                    <p className="text-xl font-bold tracking-tighter">18</p>
+                    <p className="text-xl font-bold tracking-tighter">{metrics.totals.sent}</p>
                   </div>
                 </div>
              </div>
@@ -286,20 +323,36 @@ function AutomationPage() {
                 <h4 className="text-[10px] font-bold uppercase tracking-widest mb-5 flex items-center gap-2 opacity-50">
                    <History className="size-3" /> Recent Activity
                 </h4>
+                <div className="grid grid-cols-3 gap-2 mb-4">
+                  <div className="rounded-lg border border-white/10 bg-white/5 p-2">
+                    <p className="text-[10px] uppercase opacity-50">Completed</p>
+                    <p className="text-sm font-semibold">{metrics.completedCount}</p>
+                  </div>
+                  <div className="rounded-lg border border-white/10 bg-white/5 p-2">
+                    <p className="text-[10px] uppercase opacity-50">Failed</p>
+                    <p className="text-sm font-semibold">{metrics.failedCount}</p>
+                  </div>
+                  <div className="rounded-lg border border-white/10 bg-white/5 p-2">
+                    <p className="text-[10px] uppercase opacity-50">Researched</p>
+                    <p className="text-sm font-semibold">{metrics.totals.researched}</p>
+                  </div>
+                </div>
                 <div className="space-y-4">
                   {runs?.map(run => (
-                    <div key={run.id} className="flex items-center justify-between">
+                    <div key={run.id} className="flex items-start justify-between gap-3">
                       <div className="flex flex-col">
                         <span className="text-xs font-semibold">{new Date(run.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                         <span className="text-[10px] opacity-30 font-medium">{new Date(run.created_at).toLocaleDateString()}</span>
+                        <span className="text-[10px] opacity-50 mt-1 capitalize">{run.status}</span>
                       </div>
-                      <div className="flex items-center gap-3">
-                        <Badge variant="outline" className="text-[10px] bg-emerald-500/5 border-emerald-500/10 text-emerald-400/80 px-2 h-5">+{run.leads_sourced} leads</Badge>
-                        {run.status === 'completed' ? <CheckCircle2 className="size-4 text-emerald-500/60" /> : <XCircle className="size-4 text-rose-500/60" />}
+                      <div className="flex items-center gap-2 flex-wrap justify-end">
+                        <Badge variant="outline" className="text-[10px] bg-emerald-500/5 border-emerald-500/10 text-emerald-400/80 px-2 h-5">+{Number(run.leads_sourced ?? 0)} leads</Badge>
+                        <Badge variant="outline" className="text-[10px] bg-blue-500/5 border-blue-500/10 text-blue-300/80 px-2 h-5">{Number(run.emails_sent ?? 0)} sent</Badge>
+                        {run.status === 'completed' ? <CheckCircle2 className="size-4 text-emerald-500/60" /> : run.status === 'running' ? <Loader2 className="size-4 text-blue-400/80 animate-spin" /> : <XCircle className="size-4 text-rose-500/60" />}
                       </div>
                     </div>
                   ))}
-                  {!runs?.length && <p className="text-xs opacity-40 py-4 text-center border border-dashed border-white/5 rounded-xl">No runs yet.</p>}
+                  {!runs?.length && <p className="text-xs opacity-40 py-4 text-center border border-dashed border-white/5 rounded-xl">No runs yet. Start the engine to begin collecting live results.</p>}
                 </div>
              </div>
           </CardContent>
@@ -307,18 +360,30 @@ function AutomationPage() {
       </div>
 
       <Card className="border-white/5 bg-black/40 backdrop-blur-xl shadow-2xl overflow-hidden">
-        <CardHeader className="border-b border-white/5">
+          <CardHeader className="border-b border-white/5">
           <CardTitle className="text-lg">Agent Logs</CardTitle>
-          <CardDescription>Raw processing history from the latest autonomous run.</CardDescription>
+          <CardDescription>
+            {metrics.active
+              ? "Live stream from current run."
+              : metrics.latest
+                ? `Latest run status: ${metrics.latest.status}`
+                : "Raw processing history from autonomous runs."}
+          </CardDescription>
         </CardHeader>
         <CardContent className="p-0">
           <div className="bg-black/60 font-mono text-[11px] p-6 h-72 overflow-y-auto custom-scrollbar">
-             {runs?.[0]?.logs?.map((log: string, i: number) => (
+             {latestLogs.length > 0 ? latestLogs.map((log: string, i: number) => (
                <div key={i} className="mb-2 flex gap-4">
-                 <span className="text-emerald-500/40 shrink-0 select-none">[{new Date(runs[0].created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}]</span> 
+                 <span className="text-emerald-500/40 shrink-0 select-none">
+                  [{new Date(metrics.latest?.created_at || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}]
+                 </span> 
                  <span className="opacity-70 leading-relaxed">{log}</span>
                </div>
-             )) || <div className="text-emerald-500/20 text-center py-20 italic">WAITING FOR NEXT SCHEDULED LOOP...</div>}
+             )) : (
+              <div className="text-emerald-500/30 text-center py-20 italic">
+                {metrics.active ? "RUNNING... WAITING FOR LOG ENTRIES" : "NO RUN LOGS YET. ENABLE THE ENGINE TO START A LIVE LOOP."}
+              </div>
+             )}
           </div>
         </CardContent>
       </Card>
