@@ -1,0 +1,5 @@
+- [x] Expand automation settings editor to include full ICP/search fields and persist them
+- [x] Update automation read-only summary to display new ICP/search fields
+- [x] Add /search and /scrape endpoints to playwright-service/playwright-server.js
+- [ ] (If needed) align proxy support for search/scrape paths
+- [ ] Run validation checks (type/lint or targeted smoke check) and summarize
