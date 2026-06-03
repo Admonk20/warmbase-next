@@ -6,6 +6,8 @@
 - [x] Add near-real-time polling for automation config and runs
 - [x] Improve run activity cards with richer status/counts/timestamps
 - [x] Improve Agent Logs panel to reflect latest run with status-aware empty states
-- [ ] Fix automation page editability issue (potential click interception/stacking)
-- [ ] Lighten automation UI theme (remove excessive dark overlays/surfaces)
+- [x] Fix automation page editability issue (potential click interception/stacking)
+- [x] Lighten automation UI theme (remove excessive dark overlays/surfaces)
+- [ ] Add AI web search function in sourcing AI layer (replace Playwright dependency)
+- [ ] Switch sourcing pipeline to AI web search primary path with resilient fallback
 - [ ] Run validation checks (type/lint or targeted smoke check) and summarize
