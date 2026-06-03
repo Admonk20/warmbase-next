@@ -68,6 +68,95 @@ const limiter = createLimiter({
   max: Number(process.env.RATE_LIMIT_MAX || 10),
 });
 
+app.post('/scrape', limiter, async (req, res) => {
+  if (API_KEY) {
+    const key = (req.headers['x-api-key'] || req.headers['authorization'])?.toString();
+    const token = key?.startsWith('Bearer ') ? key.slice(7) : key;
+    if (!token || token !== API_KEY) return res.status(401).json({ error: 'unauthorized' });
+  }
+
+  const { url, width = 1280, height = 800 } = req.body || {};
+  if (!url) return res.status(400).json({ error: 'missing url' });
+
+  if (activePages >= MAX_CONCURRENT_PAGES) {
+    return res.status(503).json({ error: 'too many requests' });
+  }
+
+  activePages++;
+  let context = null;
+  let page = null;
+  try {
+    const browser = await ensureBrowser();
+    context = await browser.newContext({ viewport: { width: Number(width), height: Number(height) } });
+    page = await context.newPage();
+    await page.goto(url, { waitUntil: 'networkidle' });
+    const title = await page.title();
+    const text = await page.evaluate(() => document.documentElement.innerText || '');
+    return res.json({ title, text });
+  } catch (err) {
+    console.error('scrape error', err);
+    return res.status(500).json({ error: String(err) });
+  } finally {
+    try {
+      if (page) await page.close();
+      if (context) await context.close();
+    } catch (e) {
+      console.error('cleanup error', e);
+    }
+    activePages = Math.max(0, activePages - 1);
+  }
+});
+
+app.post('/search', limiter, async (req, res) => {
+  if (API_KEY) {
+    const key = (req.headers['x-api-key'] || req.headers['authorization'])?.toString();
+    const token = key?.startsWith('Bearer ') ? key.slice(7) : key;
+    if (!token || token !== API_KEY) return res.status(401).json({ error: 'unauthorized' });
+  }
+
+  const { query, limit = 10 } = req.body || {};
+  if (!query) return res.status(400).json({ error: 'missing query' });
+
+  if (activePages >= MAX_CONCURRENT_PAGES) {
+    return res.status(503).json({ error: 'too many requests' });
+  }
+
+  activePages++;
+  let context = null;
+  let page = null;
+  try {
+    const browser = await ensureBrowser();
+    context = await browser.newContext({ viewport: { width: 1280, height: 800 } });
+    page = await context.newPage();
+    const url = `https://www.bing.com/search?q=${encodeURIComponent(query)}`;
+    await page.goto(url, { waitUntil: 'networkidle' });
+    const results = await page.evaluate((max) => {
+      const items = Array.from(document.querySelectorAll('li.b_algo'));
+      return items.slice(0, max).map((item) => {
+        const anchor = item.querySelector('h2 a');
+        const snippet = item.querySelector('p')?.textContent?.trim() || undefined;
+        return {
+          url: anchor?.href || '',
+          title: anchor?.textContent?.trim() || undefined,
+          snippet,
+        };
+      });
+    }, Number(limit));
+    return res.json({ results });
+  } catch (err) {
+    console.error('search error', err);
+    return res.status(500).json({ error: String(err) });
+  } finally {
+    try {
+      if (page) await page.close();
+      if (context) await context.close();
+    } catch (e) {
+      console.error('cleanup error', e);
+    }
+    activePages = Math.max(0, activePages - 1);
+  }
+});
+
 app.post('/screenshot', limiter, async (req, res) => {
   if (API_KEY) {
     const key = (req.headers['x-api-key'] || req.headers['authorization'])?.toString();
