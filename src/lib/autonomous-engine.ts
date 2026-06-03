@@ -5,6 +5,10 @@ import { sendEmail, draftEmail } from "./email.functions";
 import { recomputeOne } from "./scoring.functions";
 
 export async function runAutonomousEngine(supabase: SupabaseClient) {
+  console.log("startSourcingRun own property names:", Object.getOwnPropertyNames(startSourcingRun || {}));
+  console.log("startSourcingRun prototype property names:", Object.getOwnPropertyNames(Object.getPrototypeOf(startSourcingRun || {})));
+  console.log("startSourcingRun.__executeServer details:", startSourcingRun?.__executeServer?.toString());
+
   const { data: configs, error: cErr } = await supabase
     .from("automation_config")
     .select("*")
