@@ -72,7 +72,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           {children}
         </div>
       </main>
-      <AssistantWidget />
+      {!(path === "/automation" || path.startsWith("/automation/")) && <AssistantWidget />}
     </div>
   );
 }

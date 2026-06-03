@@ -156,9 +156,9 @@ function AutomationPage() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <Card className="lg:col-span-2 border-white/5 bg-black/40 backdrop-blur-xl shadow-2xl relative group overflow-hidden">
-          <div className="absolute inset-0 bg-gradient-to-tr from-emerald-500/5 via-transparent to-blue-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
-          <CardHeader className="flex flex-row items-center justify-between">
+        <Card className="lg:col-span-2 border-border bg-card shadow-sm relative group overflow-hidden">
+          <div className="absolute inset-0 pointer-events-none bg-gradient-to-tr from-emerald-500/5 via-transparent to-blue-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
+          <CardHeader className="relative z-10 flex flex-row items-center justify-between">
             <div className="space-y-1">
               <CardTitle className="text-xl flex items-center gap-2">
                 <Target className="size-5 text-emerald-400" /> Target ICP & Offering
@@ -171,9 +171,9 @@ function AutomationPage() {
               </Button>
             )}
           </CardHeader>
-          <CardContent>
+          <CardContent className="relative z-10">
             {isEditing ? (
-              <form className="space-y-6 relative" onSubmit={(e) => {
+              <form className="space-y-6 relative z-10" onSubmit={(e) => {
                 e.preventDefault();
                 const formData = new FormData(e.currentTarget);
                 const parsedLimit = Math.min(40, Math.max(5, Number(formData.get("limit")) || 20));
@@ -215,7 +215,7 @@ function AutomationPage() {
                   <Label>Core Services & Value Props</Label>
                   <Textarea 
                     name="services" 
-                    className="min-h-[120px] bg-white/5 border-white/10" 
+                    className="min-h-[120px]" 
                     defaultValue={config?.services_offered} 
                     placeholder="Describe exactly what your service provider/agency does. The AI uses this to find matches and write emails."
                   />
@@ -256,7 +256,7 @@ function AutomationPage() {
             ) : (
               <div className="space-y-8">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="p-5 rounded-2xl bg-white/5 border border-white/5 space-y-4">
+                  <div className="p-5 rounded-2xl bg-muted/40 border border-border space-y-4">
                     <h4 className="text-[10px] font-bold uppercase tracking-widest text-emerald-400">Targeting Strategy</h4>
                     <div className="space-y-3">
                       <div className="flex items-center gap-3">
@@ -269,7 +269,7 @@ function AutomationPage() {
                       </div>
                     </div>
                   </div>
-                  <div className="p-5 rounded-2xl bg-white/5 border border-white/5 space-y-4">
+                  <div className="p-5 rounded-2xl bg-muted/40 border border-border space-y-4">
                     <h4 className="text-[10px] font-bold uppercase tracking-widest text-blue-400">Identity Profile</h4>
                     <div className="space-y-1">
                       <p className="text-base font-semibold">{config?.sender_name || "Unset"}</p>
@@ -278,7 +278,7 @@ function AutomationPage() {
                     </div>
                   </div>
                 </div>
-                <div className="p-5 rounded-2xl bg-white/5 border border-white/5 space-y-3">
+                <div className="p-5 rounded-2xl bg-muted/40 border border-border space-y-3">
                    <h4 className="text-[10px] font-bold uppercase tracking-widest text-purple-400">Offer Reasoning</h4>
                    <p className="text-sm leading-relaxed opacity-70 italic font-medium">"{config?.services_offered || "Add your service description to start autonomous outreach."}"</p>
                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-2">
@@ -292,7 +292,7 @@ function AutomationPage() {
           </CardContent>
         </Card>
 
-        <Card className="border-white/5 bg-black/40 backdrop-blur-xl shadow-2xl relative overflow-hidden group">
+        <Card className="border-border bg-card shadow-sm relative overflow-hidden group">
           <div className="absolute inset-0 bg-gradient-to-b from-blue-500/5 to-transparent pointer-events-none" />
           <CardHeader>
             <CardTitle className="text-xl">Loop Performance</CardTitle>
@@ -319,20 +319,20 @@ function AutomationPage() {
                   </div>
                 </div>
              </div>
-             <div className="pt-6 border-t border-white/5">
+             <div className="pt-6 border-t border-border">
                 <h4 className="text-[10px] font-bold uppercase tracking-widest mb-5 flex items-center gap-2 opacity-50">
                    <History className="size-3" /> Recent Activity
                 </h4>
                 <div className="grid grid-cols-3 gap-2 mb-4">
-                  <div className="rounded-lg border border-white/10 bg-white/5 p-2">
+                  <div className="rounded-lg border border-border bg-muted/40 p-2">
                     <p className="text-[10px] uppercase opacity-50">Completed</p>
                     <p className="text-sm font-semibold">{metrics.completedCount}</p>
                   </div>
-                  <div className="rounded-lg border border-white/10 bg-white/5 p-2">
+                  <div className="rounded-lg border border-border bg-muted/40 p-2">
                     <p className="text-[10px] uppercase opacity-50">Failed</p>
                     <p className="text-sm font-semibold">{metrics.failedCount}</p>
                   </div>
-                  <div className="rounded-lg border border-white/10 bg-white/5 p-2">
+                  <div className="rounded-lg border border-border bg-muted/40 p-2">
                     <p className="text-[10px] uppercase opacity-50">Researched</p>
                     <p className="text-sm font-semibold">{metrics.totals.researched}</p>
                   </div>
@@ -352,15 +352,15 @@ function AutomationPage() {
                       </div>
                     </div>
                   ))}
-                  {!runs?.length && <p className="text-xs opacity-40 py-4 text-center border border-dashed border-white/5 rounded-xl">No runs yet. Start the engine to begin collecting live results.</p>}
+                  {!runs?.length && <p className="text-xs opacity-60 py-4 text-center border border-dashed border-border rounded-xl">No runs yet. Start the engine to begin collecting live results.</p>}
                 </div>
              </div>
           </CardContent>
         </Card>
       </div>
 
-      <Card className="border-white/5 bg-black/40 backdrop-blur-xl shadow-2xl overflow-hidden">
-          <CardHeader className="border-b border-white/5">
+      <Card className="border-border bg-card shadow-sm overflow-hidden">
+          <CardHeader className="border-b border-border">
           <CardTitle className="text-lg">Agent Logs</CardTitle>
           <CardDescription>
             {metrics.active
@@ -371,7 +371,7 @@ function AutomationPage() {
           </CardDescription>
         </CardHeader>
         <CardContent className="p-0">
-          <div className="bg-black/60 font-mono text-[11px] p-6 h-72 overflow-y-auto custom-scrollbar">
+          <div className="bg-muted/30 font-mono text-[11px] p-6 h-72 overflow-y-auto custom-scrollbar">
              {latestLogs.length > 0 ? latestLogs.map((log: string, i: number) => (
                <div key={i} className="mb-2 flex gap-4">
                  <span className="text-emerald-500/40 shrink-0 select-none">
@@ -380,7 +380,7 @@ function AutomationPage() {
                  <span className="opacity-70 leading-relaxed">{log}</span>
                </div>
              )) : (
-              <div className="text-emerald-500/30 text-center py-20 italic">
+              <div className="text-muted-foreground text-center py-20 italic">
                 {metrics.active ? "RUNNING... WAITING FOR LOG ENTRIES" : "NO RUN LOGS YET. ENABLE THE ENGINE TO START A LIVE LOOP."}
               </div>
              )}
