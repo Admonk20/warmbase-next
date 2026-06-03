@@ -129,7 +129,18 @@ app.post('/search', limiter, async (req, res) => {
     context = await browser.newContext({ viewport: { width: 1280, height: 800 } });
     page = await context.newPage();
     const url = `https://www.bing.com/search?q=${encodeURIComponent(query)}`;
-    await page.goto(url, { waitUntil: 'networkidle' });
+
+    // Prefer domcontentloaded for resilience; networkidle can hang on heavy/long-lived resources.
+    try {
+      await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 20000 });
+    } catch (primaryErr) {
+      // Retry once with a shorter timeout and looser wait strategy.
+      await page.goto(url, { waitUntil: 'load', timeout: 15000 });
+    }
+
+    // Give result blocks a moment to render, but do not fail hard if selector wait times out.
+    await page.waitForSelector('li.b_algo', { timeout: 5000 }).catch(() => null);
+
     const results = await page.evaluate((max) => {
       const items = Array.from(document.querySelectorAll('li.b_algo'));
       return items.slice(0, max).map((item) => {
