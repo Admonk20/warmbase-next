@@ -68,13 +68,18 @@ export const runSourcingStepInternal = async ({ data, context }: { data: { runId
   try {
     const hits: { url: string; title?: string; description?: string; markdown?: string }[] = [];
     const perQuery = Math.max(4, Math.ceil((icp.limit * 1.6) / Math.max(queries.length, 1)));
-    const { playwrightSearch } = await import("./sourcing.server");
+    const { aiWebSearch } = await import("./sourcing-ai.server");
     for (const q of queries) {
       try {
-        const results = await playwrightSearch(q, perQuery);
+        const results = await aiWebSearch({
+          supabase: context.supabase,
+          userId: context.userId,
+          query: q,
+          limit: perQuery,
+        });
         hits.push(...results);
       } catch (e) {
-        console.error("playwright search failed", q, e);
+        console.error("ai web search failed", q, e);
       }
     }
     const deduped = uniqueByKey(hits, (h) => h.url).slice(0, Math.max(icp.limit * 2, 12));
@@ -94,6 +99,10 @@ export const runSourcingStepInternal = async ({ data, context }: { data: { runId
         limit: icp.limit,
       });
     } catch (e) {
+      extracted = [];
+    }
+
+    if (!extracted.length) {
       extracted = deduped
         .map((h) => {
           const ex = regexExtractFromMarkdown(h.markdown ?? h.description ?? "", h.url);
