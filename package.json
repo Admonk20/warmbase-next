@@ -92,7 +92,7 @@
   "scripts": {
     "build": "vite build",
     "build:dev": "vite build --mode development",
-    "dev": "vite dev",
+    "dev": "node api.js && vite dev",
     "format": "prettier --write .",
     "lint": "eslint \"src/**/*.{ts,tsx}\" \"api/**/*.ts\" vite.config.ts eslint.config.cjs --ignore-pattern dist/** --ignore-pattern **/*.d.ts",
     "preview": "vite preview"
